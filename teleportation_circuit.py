@@ -1,5 +1,5 @@
 from qiskit import QuantumRegister, QuantumCircuit, ClassicalRegister, transpile
-
+from qiskit.circuit.library import UnitaryGate
 def to_z_basis(qc, qubit):
     pass
 
@@ -37,7 +37,7 @@ def bob_correction(qc, q1, q2, qbob):
     qc.cx(q1, qbob)
     qc.cz(q2, qbob)
     
-def get_circuit(initialization, alice_noise, bob_noise, basis_change):
+def get_circuit(init_operator, alice_noise, bob_noise, basis_change):
     alice_reg = QuantumRegister(2, name="alice")
     bob_reg = QuantumRegister(1, name="bob")
     qc = QuantumCircuit(alice_reg, bob_reg)
@@ -47,11 +47,12 @@ def get_circuit(initialization, alice_noise, bob_noise, basis_change):
     qc.add_register(alice_bell_class_reg)
     alice_psi_class_reg = ClassicalRegister(1)
     qc.add_register(alice_psi_class_reg)
+    
+    qc.append(UnitaryGate(init_operator.data, label='State Initializator'), [alice_reg[0]])
 
     entangle(qc, alice_reg[1], bob_reg[0])
     alice_noise(qc, alice_reg[1])
     bob_noise(qc, bob_reg[0])
-    initialization(qc, alice_reg[0])
     bell_basis(qc, alice_reg[0], alice_reg[1])
     bob_correction(qc, alice_reg[1], alice_reg[0], bob_reg[0])
 

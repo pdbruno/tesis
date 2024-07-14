@@ -1,38 +1,56 @@
-from qiskit.quantum_info import random_unitary, DensityMatrix
+from qiskit.quantum_info import random_unitary, DensityMatrix, Operator
 import numpy as np
+from teleportation_circuit import run_simulation
+from quantum_state_tomography import get_probabilities_and_states
 
 zero = DensityMatrix.from_label("0")
 
+
 def to_bloch(rho: DensityMatrix):
-    [[a, b], [c, d]] = rho.data
-    return np.array([complex(c + b).real, complex(c - b).imag, complex(a-d).real])
+    return np.array([(rho.data[1, 0] + rho.data[0, 1]).real, (rho.data[1, 0] - rho.data[0, 1]).imag, (rho.data[0, 0] - rho.data[1, 1]).real])
+
 
 def haar_measure_average(shots):
-    for i in range(shots):
-        haar_random_operator = random_unitary(2)
-        f = lambda qc, psi: qc.append(haar_random_operator.to_instruction(), [psi])
-        yield f, to_bloch(zero.evolve(haar_random_operator))
-        
-def eigenvector_x_mas(qc, psi_alice):
-    qc.h(psi_alice)
-def eigenvector_x_menos(qc, psi_alice):
-    qc.x(psi_alice)
-    qc.h(psi_alice)
-def eigenvector_y_mas(qc, psi_alice):
-    qc.h(psi_alice)
-    qc.s(psi_alice)
-def eigenvector_y_menos(qc, psi_alice):
-    qc.h(psi_alice)
-    qc.sdg(psi_alice)
-def eigenvector_z_mas(qc, psi_alice):
-    pass
-def eigenvector_z_menos(qc, psi_alice):
-    qc.x(psi_alice)
-    
+    return (random_unitary(2) for _ in range(shots))
+
+
+eigenvector_x_mas = Operator.from_label("H")
+eigenvector_x_menos = Operator.from_label("X") & Operator.from_label("H")
+eigenvector_y_mas = Operator.from_label("H") & Operator.from_label("S")
+eigenvector_y_menos = Operator.from_label("H") & Operator.from_label("S").adjoint()
+eigenvector_z_mas = Operator.from_label("I")
+eigenvector_z_menos = Operator.from_label("X")
+
+
 def pauli_eigenvectors_average():
-    yield eigenvector_x_mas, np.array([1., 0., 0.])
-    yield eigenvector_x_menos, np.array([-1., 0., 0.])
-    yield eigenvector_y_mas, np.array([0., 1., 0.])    
-    yield eigenvector_y_menos, np.array([0., -1., 0.])    
-    yield eigenvector_z_mas, np.array([0., 0., 1.])    
-    yield eigenvector_z_menos, np.array([0., 0., -1.])      
+    return [
+        eigenvector_x_mas,
+        eigenvector_x_menos,
+        eigenvector_y_mas,
+        eigenvector_y_menos,
+        eigenvector_z_mas,
+        eigenvector_z_menos,
+    ]
+
+
+def get_score_protocol_distance(p_is, rho_a, rho_B_is, distance):
+    return p_is @ distance(rho_a, rho_B_is)
+
+
+def average_distance_of_teleportation(
+    input_sampler, distance, alice_noise, bob_noise, simulator, shots_per_input
+):
+    score_accumulator = 0
+    sample_count = 0
+    for init_operator in input_sampler:
+        rho_a = to_bloch(zero.evolve(init_operator))
+        measurements_xyz = run_simulation(
+            init_operator, alice_noise, bob_noise, shots_per_input, simulator
+        )
+        p_is, rho_B_is = get_probabilities_and_states(measurements_xyz, shots_per_input)
+        score_accumulator += get_score_protocol_distance(
+            p_is, rho_a, rho_B_is, distance
+        )
+        sample_count += 1
+
+    return score_accumulator / sample_count

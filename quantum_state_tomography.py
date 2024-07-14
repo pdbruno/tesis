@@ -13,7 +13,8 @@ def get_coordinate(base, bell_state):
 #                          obtener_componente(mediciones_base_y, bell_state), 
 #                          obtener_componente(mediciones_base_z, bell_state)) for bell_state in bell_states }
 
-def get_probabilities_and_states(measurements_x, measurements_y, measurements_z, shots):
+def get_probabilities_and_states(measurements_xyz, shots):
+    measurements_x, measurements_y, measurements_z = measurements_xyz
     probabilities = np.array([ get_counts_for_bell_state(bell_state, measurements_x, measurements_y, measurements_z) / (shots*3) for bell_state in bell_states ])
     states = np.array([[get_coordinate(measurements_x, bell_state), 
                           get_coordinate(measurements_y, bell_state), 

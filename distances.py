@@ -2,7 +2,7 @@ from numpy import linalg as LA
 import math
 
 def trace_distance(r, s):
-    return LA.vector_norm(r-s);
+    return LA.vector_norm(r-s)
 
 def fidelity(r, s):
     return (1 + r @ s)/2
