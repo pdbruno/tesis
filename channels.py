@@ -5,7 +5,8 @@ import numpy.polynomial.polynomial as poly
 import numpy as np
 import math
 from abc import ABC, abstractmethod
-
+from qiskit.circuit.operation import Operation
+from qiskit.circuit.library import IGate, ZGate
 
 class BaseChannel(ABC):
     @staticmethod
@@ -34,16 +35,33 @@ class BaseChannel(ABC):
     label = None
 
     @staticmethod
-    def bob_optimal_rotation_for_noises(noise_a, noise_b):
-        if isinstance(noise_a, AmplitudeDampingChannel) and isinstance(
-            noise_b, MirroredAmplitudeDampingChannel
+    def bob_optimal_rotation_for_noises(noise_a, noise_b) -> Operation:
+        if (
+            isinstance(noise_a, AmplitudeDampingChannel)
+            and isinstance(noise_b, MirroredAmplitudeDampingChannel)
+        ) or (
+            isinstance(noise_a, MirroredAmplitudeDampingChannel)
+            and isinstance(noise_b, AmplitudeDampingChannel)
         ):
-            return None
-        elif isinstance(noise_a, MirroredAmplitudeDampingChannel) and isinstance(
-            noise_b, AmplitudeDampingChannel
-        ):
-            return None
-        return np.eye(2)
+            pA = noise_a.p
+            pB = noise_b.p
+
+            if (
+                0 < pB
+                and pB < 1
+                and 1 + math.sqrt(1 + 2 * pB - 3 * pB**2) < 2 * pA + pB
+            ) or (pB == 1 and pA > 0):
+                """ 00 -> Z
+                    01 -> ZX
+                    10 -> I
+                    11 -> X """
+                return ZGate()
+
+                """ 00 -> I
+                    01 -> X
+                    10 -> Z
+                    11 -> ZX """
+        return IGate()
 
 
 class DepolarizingChannel(BaseChannel):

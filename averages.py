@@ -1,17 +1,26 @@
+from typing import Sequence
 from qiskit.quantum_info import random_unitary, DensityMatrix, Operator
 import numpy as np
+from channels import BaseChannel
 from teleportation_circuit import run_simulation
 from quantum_state_tomography import get_probabilities_and_states
+from qiskit.providers import BackendV2
 
 zero = DensityMatrix.from_label("0")
 
 
 def to_bloch(rho: DensityMatrix):
-    return np.array([(rho.data[1, 0] + rho.data[0, 1]).real, (rho.data[1, 0] - rho.data[0, 1]).imag, (rho.data[0, 0] - rho.data[1, 1]).real])
+    return np.array(
+        [
+            (rho.data[1, 0] + rho.data[0, 1]).real,
+            (rho.data[1, 0] - rho.data[0, 1]).imag,
+            (rho.data[0, 0] - rho.data[1, 1]).real,
+        ]
+    )
 
 
-def haar_measure_average(shots):
-    return (random_unitary(2) for _ in range(shots))
+def haar_measure_average(shots) -> Sequence[Operator]:
+    return (random_unitary(2) for _ in range(shots)) # type: ignore
 
 
 eigenvector_x_mas = Operator.from_label("H")
@@ -38,7 +47,12 @@ def get_score_protocol_distance(p_is, rho_a, rho_B_is, distance):
 
 
 def average_distance_of_teleportation(
-    input_sampler, distance, alice_noise, bob_noise, simulator, shots_per_input
+    input_sampler: Sequence[Operator],
+    distance,
+    alice_noise: BaseChannel,
+    bob_noise: BaseChannel,
+    simulator: BackendV2,
+    shots_per_input: int,
 ):
     score_accumulator = 0
     sample_count = 0

@@ -59,12 +59,12 @@ def bell_basis(qc, q1, q2):
 def bob_correction(
     qc: QuantumCircuit, q1, q2, qbob, alice_noise: BaseChannel, bob_noise: BaseChannel
 ):
+    qc.cx(q1, qbob)
+    qc.cz(q2, qbob)
     # aca va otra correccion que depende de los dos ruidos
     qc.append(
         UnitaryGate(BaseChannel.bob_optimal_rotation_for_noises(alice_noise, bob_noise), label="Optimal Rotation"), [qbob]  # type: ignore
     )
-    qc.cx(q1, qbob)
-    qc.cz(q2, qbob)
 
 
 def get_circuit(
