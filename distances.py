@@ -1,9 +1,10 @@
 from numpy import linalg as LA
+import numpy as np
 import math
 
 
 def trace_distance(r, s):
-    return LA.vector_norm(r - s)
+    return np.sqrt((r - s) @ (r - s)) / 2
 
 
 def fidelity(r, s):
