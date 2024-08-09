@@ -37,11 +37,11 @@ class BaseChannel(ABC):
     @staticmethod
     def bob_optimal_rotation_for_noises(noise_a, noise_b) -> Operation:
         if (
-            isinstance(noise_a, AmplitudeDampingChannel)
-            and isinstance(noise_b, MirroredAmplitudeDampingChannel)
+            type(noise_a) == AmplitudeDampingChannel
+            and type(noise_b) == MirroredAmplitudeDampingChannel
         ) or (
-            isinstance(noise_a, MirroredAmplitudeDampingChannel)
-            and isinstance(noise_b, AmplitudeDampingChannel)
+            type(noise_a) == MirroredAmplitudeDampingChannel
+            and type(noise_b) == AmplitudeDampingChannel
         ):
             pA = noise_a.p
             pB = noise_b.p
@@ -110,7 +110,7 @@ class AmplitudeDampingChannel(BaseChannel):
         return [self.get_theta()]
 
     def get_theta(self):
-        return math.asin(math.sqrt(self.p))  # γ = sin^2(θ)
+        return 2 * math.asin(math.sqrt(self.p))  # sin^2 (θ/2) = γ
 
     def __init__(self, p: float) -> None:
         super().__init__()
@@ -122,6 +122,7 @@ class AmplitudeDampingChannel(BaseChannel):
         theta = Parameter("theta")
         qc.cry(theta, 0, 1)
         qc.cx(1, 0)
+        #qc.measure(1, 0)
         return qc
 
     def append_channel_instruction(self, qc: QuantumCircuit, qubit: QuantumRegister):

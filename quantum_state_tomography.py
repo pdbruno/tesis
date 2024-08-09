@@ -19,7 +19,7 @@ def get_counts_for_bell_state(
 def get_coordinate(base, bell_state):
     zeroes = base.get(bell_state + "0", 0)
     ones = base.get(bell_state + "1", 0)
-    return (zeroes - ones) / (zeroes + ones)
+    return (zeroes - ones) / (zeroes + ones) if zeroes + ones != 0 else 0
 
 
 # probabilidades = { bell_state: get_counts_for_bell_state(bell_state) / (shots*3) for bell_state in bell_states }
