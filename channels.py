@@ -1,5 +1,5 @@
 from typing import Sequence
-from qiskit import QuantumRegister, QuantumCircuit
+from qiskit import ClassicalRegister, QuantumRegister, QuantumCircuit
 from qiskit.circuit import Parameter
 import numpy.polynomial.polynomial as poly
 import numpy as np
@@ -9,33 +9,33 @@ from qiskit.circuit.operation import Operation
 from qiskit.circuit.library import IGate, ZGate
 
 class BaseChannel(ABC):
-    @staticmethod
     @abstractmethod
-    def get_circuit() -> QuantumCircuit:
+    def get_circuit(self, suffix) -> QuantumCircuit:
         pass
 
-    @classmethod
-    def get_instruction_label(cls, suffix) -> str:
-        return f"{cls.label}_" + suffix
+    @abstractmethod
+    def get_theta(self, p) -> float:
+        pass
+
+    def get_instruction_label(self, suffix) -> str:
+        return f"{self.label}_{suffix}"
+    
+    def get_parameter_label(self, suffix) -> str:
+        return f"theta_{self.label}_{suffix}"
 
     @abstractmethod
     def append_channel_instruction(self, qc: QuantumCircuit, qubit: QuantumRegister):
         pass
 
-    @abstractmethod
-    def get_parameters(self) -> Sequence:
-        pass
-
     def get_instruction(self, suffix):
-        return self.circuit.assign_parameters(self.get_parameters()).to_instruction(
-            label=self.get_instruction_label(suffix)
-        )
+        return self.get_circuit(suffix).to_instruction(label=self.get_instruction_label(suffix))
 
-    circuit = get_circuit()
-    label = None
+    def __init__(self) -> None:
+        super().__init__()
+        self.label = None
 
     @staticmethod
-    def bob_optimal_rotation_for_noises(noise_a, noise_b) -> Operation:
+    def bob_optimal_rotation_for_noises(noise_a, noise_b, pA, pB) -> float:
         if (
             type(noise_a) == AmplitudeDampingChannel
             and type(noise_b) == MirroredAmplitudeDampingChannel
@@ -43,9 +43,6 @@ class BaseChannel(ABC):
             type(noise_a) == MirroredAmplitudeDampingChannel
             and type(noise_b) == AmplitudeDampingChannel
         ):
-            pA = noise_a.p
-            pB = noise_b.p
-
             if (
                 0 < pB
                 and pB < 1
@@ -55,24 +52,20 @@ class BaseChannel(ABC):
                     01 -> ZX
                     10 -> I
                     11 -> X """
-                return ZGate()
+                return math.pi #ZGate
 
                 """ 00 -> I
                     01 -> X
                     10 -> Z
                     11 -> ZX """
-        return IGate()
+        return 0
 
 
 class DepolarizingChannel(BaseChannel):
 
-    def get_parameters(self) -> Sequence:
-        return [self.get_theta()]
-
-    @staticmethod
-    def get_circuit():
+    def get_circuit(self, suffix):
         qc = QuantumCircuit(4)
-        theta = Parameter("theta")
+        theta = Parameter(self.get_parameter_label(suffix))
         qc.ry(theta, 1)
         qc.ry(theta, 2)
         qc.ry(theta, 3)
@@ -81,14 +74,14 @@ class DepolarizingChannel(BaseChannel):
         qc.cz(3, 0)
         return qc
 
-    def get_theta(self):
-        z = poly.polyroots([-self.p / 4, 1, -1])[0]
+    def get_theta(self, p):
+        z = poly.polyroots([-p / 4, 1, -1])[0]
         # p/4=z−z^2 --------- For any 0⩽p⩽1, there should be a unique 0⩽z⩽1/2 which solves the above equation.
         return 2 * math.acos(math.sqrt(1 - z))  # cos(theta/2) = sqrt(1-z)
 
-    def __init__(self, p: float) -> None:
+    def __init__(self) -> None:
         super().__init__()
-        self.p = p
+        self.label = "DepC"
 
     def append_channel_instruction(self, qc: QuantumCircuit, qubit: QuantumRegister):
         parent_delta_z = QuantumRegister(
@@ -100,61 +93,59 @@ class DepolarizingChannel(BaseChannel):
             [qubit, parent_delta_z[0], parent_delta_z[1], parent_delta_z[2]],
         )
 
-    circuit = get_circuit()
-    label = "DepC"
-
 
 class AmplitudeDampingChannel(BaseChannel):
 
-    def get_parameters(self) -> Sequence:
-        return [self.get_theta()]
+    def get_theta(self, p):
+        return 2 * math.asin(math.sqrt(p))  # sin^2 (θ/2) = γ
 
-    def get_theta(self):
-        return 2 * math.asin(math.sqrt(self.p))  # sin^2 (θ/2) = γ
-
-    def __init__(self, p: float) -> None:
+    def __init__(self) -> None:
         super().__init__()
-        self.p = p
+        self.label = "ADC"
 
-    @staticmethod
-    def get_circuit():
-        qc = QuantumCircuit(2)
-        theta = Parameter("theta")
+    def get_circuit(self, suffix):
+        qc = QuantumCircuit(2, 1)
+        theta = Parameter(self.get_parameter_label(suffix))
         qc.cry(theta, 0, 1)
         qc.cx(1, 0)
-        #qc.measure(1, 0)
+        qc.measure(1, 0)
         return qc
 
     def append_channel_instruction(self, qc: QuantumCircuit, qubit: QuantumRegister):
         parent_zero = QuantumRegister(
             1, f"zero_{self.get_instruction_label(qubit.name)}"
         )
+        parent_meas = ClassicalRegister(
+            1, f"meas_{self.get_instruction_label(qubit.name)}"
+        )
         qc.add_register(parent_zero)
-        qc.append(self.get_instruction(qubit.name), [qubit, parent_zero])
+        qc.add_register(parent_meas)
+        qc.append(self.get_instruction(qubit.name), [qubit, parent_zero], [parent_meas])
 
-    circuit = get_circuit()
-    label = "ADC"
+    
 
 
 class MirroredAmplitudeDampingChannel(AmplitudeDampingChannel):
-
-    @staticmethod
-    def get_circuit():
-        qc = AmplitudeDampingChannel.get_circuit()
+    def get_circuit(self, suffix):
+        qc = super().get_circuit(suffix)
         qc.x(0)
         return qc
 
-    circuit = get_circuit()
-    label = "MADC"
+    def __init__(self) -> None:
+        super().__init__()
+        self.label = "MADC"
 
 
 class NoiselessChannel(BaseChannel):
-    @staticmethod
-    def get_circuit() -> QuantumCircuit:  # type: ignore
+    def get_circuit(self, suffix):
         pass
 
     def append_channel_instruction(self, qc: QuantumCircuit, qubit: QuantumRegister):
         pass
 
-    def get_parameters(self) -> Sequence:  # type: ignore
-        pass
+    def get_theta(self, p) -> float:
+        return 0
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.label = None

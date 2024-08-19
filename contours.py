@@ -17,6 +17,8 @@ distances = list(map(lambda d: np.vectorize(d, signature='(3),(3)->()'), [trace_
     
 ps = np.linspace(0, 1, 11)
 
+exploration_space = ((x, y) for x in ps for y in ps)
+
 avg = pauli_eigenvectors_average()
 
 with open('res.txt', '+w') as f:
