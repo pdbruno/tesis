@@ -8,6 +8,15 @@ from qiskit.providers import BackendV2
 from math import cos, sin, pi
 from cmath import exp
 from numpy.typing import ArrayLike
+from scipy.stats import rv_continuous
+
+class sin_prob_dist(rv_continuous):
+    def _pdf(self, theta):
+        # The 0.5 is so that the distribution is normalized
+        return 0.5 * np.sin(theta)
+
+# Samples of theta should be drawn from between 0 and pi
+sin_sampler = sin_prob_dist(a=0, b=np.pi)
 
 
 def to_bloch(eulerian_angles):
@@ -22,17 +31,10 @@ def to_bloch(eulerian_angles):
 
 
 def haar_measure_average(shots) -> np.ndarray:
-    return np.random.uniform(0, 2 * pi, (shots, 3))
-    return np.array(
-        [
-            [
-                random.uniform(0, 2 * pi),
-                random.uniform(0, 2 * pi),
-                random.uniform(0, 2 * pi),
-            ]
-            for _ in range(shots)
-        ]
-    )
+    thetas = sin_sampler.rvs(size=shots)
+    phis_lambdas = np.random.uniform(0, 2 * pi, (shots, 2))
+    raise ValueError()
+    return np.concatenate([thetas, phis_lambdas], axis=1)
 
 
 """ 
