@@ -7,7 +7,7 @@ from quantum_state_tomography import get_probabilities_and_states
 from qiskit.providers import BackendV2
 from math import cos, sin, pi
 from cmath import exp
-from numpy.typing import ArrayLike
+from numpy.typing import NDArray
 from scipy.stats import rv_continuous
 
 class sin_prob_dist(rv_continuous):
@@ -30,7 +30,7 @@ def to_bloch(eulerian_angles):
     )
 
 
-def haar_measure_average(shots) -> np.ndarray:
+def haar_measure_average(shots) -> NDArray[np.floating]:
     thetas = sin_sampler.rvs(size=shots)
     phis_lambdas = np.random.uniform(0, 2 * pi, (shots, 2))
     raise ValueError()
@@ -62,35 +62,29 @@ all = np.array(
 )
 
 
-def pauli_eigenvectors_average() -> np.ndarray:
+def pauli_eigenvectors_average() -> NDArray[np.floating]:
     return all
 
 
 def get_score_protocol_distance(p_is, rho_a, rho_B_is, distance):
     return p_is @ distance(rho_a, rho_B_is)
 
+def get_counts(array):
+    bitstrings, counts = np.unique(
+        array,
+        axis=0,
+        return_counts=True,
+    )
+    return {
+        tuple(bitstring.data): count.item()
+        for bitstring, count in zip(bitstrings, counts)
+    }
 
-""" def average_distance_of_teleportation(
-    input_sampler: Iterable[Tuple[float, float, float]],
-    distance,
-    alice_noise: BaseChannel,
-    bob_noise: BaseChannel,
-    simulator: BackendV2,
-    shots_per_input: int,
-):
-    score_accumulator = 0
-    sample_count = 0
-    for theta, phi, lam in input_sampler:
-        rho_a = to_bloch(theta, phi, lam)
-        circuit = get_circuit(alice_noise, bob_noise)
+def average_distance_of_teleportation(formatted_results, rho_A, shots, distances):
 
-        measurements_xyz = run_simulation(
-            eigenvector_y_mas, alice_noise, bob_noise, shots_per_input, simulator
-        )
-        p_is, rho_B_is = get_probabilities_and_states(measurements_xyz, shots_per_input)
-        score_accumulator += get_score_protocol_distance(
-            p_is, rho_a, rho_B_is, distance
-        )
-        sample_count += 1
-
-    return score_accumulator / sample_count """
+    p_is, rho_B_is = get_probabilities_and_states(
+        [get_counts(formatted_results[idx_basis].T) for idx_basis in range(3)],
+        shots,
+    )
+    bloch_rho_A = to_bloch(rho_A)
+    return [get_score_protocol_distance(p_is, bloch_rho_A, rho_B_is, d) for d in distances]

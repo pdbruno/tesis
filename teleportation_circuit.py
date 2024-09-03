@@ -19,7 +19,7 @@ def bob_correction(qc: QuantumCircuit, q1, q2, qbob):
     qc.cz(q2, qbob)
     # aca va otra correccion que depende de los dos ruidos
     qc.append(
-        UGate(0, 0, Parameter("bob_optimal_rotation_theta"), label="Optimal Rotation"),
+        UGate(Parameter("bob_optimal_rotation_theta"), Parameter("bob_optimal_rotation_phi"), Parameter("bob_optimal_rotation_lambda"), label="Optimal Rotation"),
         [qbob],
     )
 
