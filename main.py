@@ -3,17 +3,20 @@ from channels import (
     DepolarizingChannel,
     AmplitudeDampingChannel,
     MirroredAmplitudeDampingChannel,
+    PhaseDampingChannel,
 )
-from averages import pauli_eigenvectors_average
 from distances import affinity, trace_distance, wooters_distance, fidelity
 import numpy as np
 from experiment import Experiment
 from qiskit.compiler import transpile
 
+from sampler import HaarMeasureSampler, PauliSampler
+
 channels = [
     AmplitudeDampingChannel(),
     MirroredAmplitudeDampingChannel(),
     DepolarizingChannel(),
+    PhaseDampingChannel()
 ]
 channel_combinations = [(chA, chB) for chA in channels for chB in channels]
 distances = list(
@@ -36,8 +39,11 @@ exploration_space = [(x, y) for x in ps for y in ps]
 sampler = SamplerV2(
     default_shots=2000,
 )
-input_sampler = pauli_eigenvectors_average()
+
+#input_sampler = PauliSampler()
+input_sampler = HaarMeasureSampler(500)
+
+
 transpiler = lambda qc: transpile(qc, sampler._backend)
 experiment = Experiment(channel_combinations, exploration_space, input_sampler, transpiler)
-df = experiment.run_with_sampler(sampler, distances, sampler._default_shots)
-df.to_csv('simulation_pauli_eigenvectors_average.csv')
+experiment.run_with_sampler(sampler, distances, sampler._default_shots, 'haar-avg-sim.csv')

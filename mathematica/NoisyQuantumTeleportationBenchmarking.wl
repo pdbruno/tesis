@@ -59,6 +59,7 @@ GetDistanceOutputFantasyName[Aff] ^= "affinity";
 WootersDist[r_,s_] := ArcCos[Sqrt[Fid[r, s]]];
 GetDistanceLabel[WootersDist] ^= "Wooters Distance";
 GetDistanceThreshold[WootersDist] ^= 0.589;
+GetDistanceOutputFantasyName[WootersDist] ^= "wooters_distance";
 
 Distances = { TrDist, Fid, Aff, WootersDist };
 
@@ -101,7 +102,7 @@ BindFreeVars = Function[{pA, pB}, #]&;
 AssociateChannelsPairsTo[f_] := Association[Table[{chA, chB} -> f[chA, chB], {chA, Channels},{chB, Channels}]];
 
 
-fanoForms = associateChannelsPairsTo[{chA, chB} |->  BindFreeVars[FanoForm[chA[pA], chB[pB]]]];
+fanoForms = AssociateChannelsPairsTo[{chA, chB} |->  BindFreeVars[FanoForm[chA[pA], chB[pB]]]];
 
 
 GetBellDiagonalResourceStateForNoises[chA_[pA_], chB_[pB_]] := 
@@ -109,7 +110,7 @@ GetBellDiagonalResourceStateForNoises[chA_[pA_], chB_[pB_]] :=
 
 normalizeEigenvectors[{eigenvalues_, eigenvectors_}] := {eigenvalues, eigenvectors * 1/Sqrt[2]};
 
-eigensystems = associateChannelsPairsTo[{chA, chB} |-> BindFreeVars[normalizeEigenvectors[FullSimplify[Eigensystem[GetBellDiagonalResourceStateForNoises[chA[pA], chB[pB]]], 0<=pA <=1 && 0<=pB <=1]]]];
+eigensystems = AssociateChannelsPairsTo[{chA, chB} |-> BindFreeVars[normalizeEigenvectors[FullSimplify[Eigensystem[GetBellDiagonalResourceStateForNoises[chA[pA], chB[pB]]], 0<=pA <=1 && 0<=pB <=1]]]];
 
 
 (* If one of the ev is already a bell state, return it. 
@@ -144,7 +145,7 @@ AvgDistDefinition[chA_, chB_, d_] := With[{
 PaulisAvg[chA_, chB_, d_] := With[{lMax = GetLMax[chA, chB], fanoForm = FanoFormForChannel[chA, chB]}, 
 	Sum[Score[chA, chB, t, fanoForm, d, lMax], {t, pauliEigenvectors}] / Length[pauliEigenvectors]];
 
-OptimizedFidelityFormula[chA_[pA_], chB_[pB_]] := Max[eigensystems[{chA, chB}][pA, pB][[1]]];
+OptimizedFidelityFormula[chA_[pA_], chB_[pB_]] := (2 * Max[eigensystems[{chA, chB}][pA, pB][[1]]] + 1)/3;
 
 
 AvgDistOfTelepFormula[chA_, chB_, Fid]:= {pA, pB} |-> OptimizedFidelityFormula[chA[pA], chB[pB]];
@@ -160,7 +161,7 @@ ForAllChannelsAndDistances[f_] := Do[
 , {d, Distances}, {chA, Channels}, {chB, Channels}]
 
 
-Map[ResourceFunction["ToPythonFunction"], eigensystems]
+(*Map[ResourceFunction["ToPythonFunction"], eigensystems]*)
 
 
 End[];

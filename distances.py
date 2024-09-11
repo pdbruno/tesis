@@ -1,14 +1,15 @@
 from numpy import linalg as LA
 import numpy as np
 import math
-
+from numpy.typing import NDArray
+from typing import Callable
 
 def trace_distance(r, s):
     return np.sqrt((r - s) @ (r - s)) / 2
 
 
 def fidelity(r, s):
-    return (1 + r @ s) / 2
+    return max(0, min(1, (1 + r @ s) / 2))
 
 
 def affinity(r, s):
@@ -28,3 +29,5 @@ def affinity(r, s):
 
 def wooters_distance(r, s):
     return math.acos(math.sqrt(fidelity(r, s)))
+
+type DistanceFunction = Callable[[NDArray[np.floating], NDArray[np.floating]], NDArray[np.floating]]

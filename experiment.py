@@ -2,16 +2,22 @@ from averages import average_distance_of_teleportation
 from channels import BaseChannel
 import numpy as np
 from numpy.typing import NDArray
-from typing import Callable
+from typing import Callable, Tuple
 from qiskit import QuantumCircuit
-from typing import cast
+from typing import cast, Callable, Sequence
 from qiskit.primitives.containers.sampler_pub import SamplerPubLike
 from qiskit.primitives.containers.bindings_array import BindingsArrayLike
 from channels import BaseChannel
-from teleportation_circuit import get_circuit
+from distances import DistanceFunction
+from sampler import BaseInputSampler
+from teleportation_circuit import (
+    BASIS_CHANGE,
+    BOB_OPTIMAL_ROTATION,
+    INIT_STATE,
+    get_circuit,
+)
 from math import pi
 from qiskit.primitives.base import BaseSamplerV2
-import pandas as pd
 
 to_z_basis_rotation = [0, 0, 0]
 to_x_basis_rotation = [pi / 2, 0, pi]
@@ -21,12 +27,15 @@ basis_change = np.asarray(
 )
 
 
-def get_cartesian_product_nashe(A, B, C):
+def get_cartesian_product_nashe(
+    A: NDArray[np.floating], sampler: BaseInputSampler, C: NDArray[np.floating]
+):
     n = len(A)
-    m = len(B)
+    m = sampler.length
     o = len(C)
     cart_prod = np.empty((n * m * o, 11), dtype="float64")
     for i in range(n):
+        B = sampler.get_samples()
         for j in range(m):
             for k in range(o):
                 idx = i * m * o + j * o + k
@@ -39,23 +48,20 @@ def get_cartesian_product_nashe(A, B, C):
 class Experiment:
     def __init__(
         self,
-        channel_combinations: list[tuple[BaseChannel, BaseChannel]],
+        channel_combinations: Sequence[tuple[BaseChannel, BaseChannel]],
         exploration_space: list[tuple[float, float]],
-        input_sampler: NDArray[np.floating],
+        input_sampler: BaseInputSampler,
         transpiler: Callable[[QuantumCircuit], QuantumCircuit],
     ) -> None:
         self.channel_combinations = channel_combinations
         self.exploration_space = exploration_space
         self.input_sampler = input_sampler
         self.transpiler = transpiler
-        self.pubs = [
-            self.generate_pub(chA, chB)
-            for chA, chB in channel_combinations
-        ]
+        self.pubs = (self.generate_pub(chA, chB) for chA, chB in channel_combinations)
 
     def generate_pub(
         self, alice_noise: BaseChannel, bob_noise: BaseChannel
-    ) -> SamplerPubLike:
+    ) -> Tuple[QuantumCircuit, BindingsArrayLike]:
         noise_params = np.array(
             [
                 [
@@ -81,85 +87,81 @@ class Experiment:
 
         parameters: BindingsArrayLike = {
             (
-                "theta_ADC_alice",
-                "theta_ADC_bob",
-                "bob_optimal_rotation_theta",
-                "bob_optimal_rotation_phi",
-                "bob_optimal_rotation_lambda",
+                alice_noise.get_parameter_label("alice"),
+                bob_noise.get_parameter_label("bob"),
+                *BOB_OPTIMAL_ROTATION,
             ): cart_prod[:, :5],
-            ("init_theta", "init_phi", "init_lambda"): cart_prod[:, 5:8],
-            (
-                "basis_change_theta",
-                "basis_change_phi",
-                "basis_change_lambda",
-            ): cart_prod[:, 8:],
+            tuple(INIT_STATE): cart_prod[:, 5:8],
+            tuple(BASIS_CHANGE): cart_prod[:, 8:],
         }
         return (self.transpiler(get_circuit(alice_noise, bob_noise)), parameters)
 
-    def run_with_sampler(self, sampler: BaseSamplerV2, distances, shots):
-        results = sampler.run(self.pubs).result()
+    def run_with_sampler(
+        self,
+        sampler: BaseSamplerV2,
+        distances: list[DistanceFunction],
+        shots: int,
+        file_path: str,
+    ):
 
-        df = pd.DataFrame(
-                {
-                    "chA": [],
-                    "chB": [],
-                    "pA": [],
-                    "pB": [],
-                    "d": [],
-                    "score": [],
-                }
-            )
-
-        for pub_result, (chA, chB) in zip(results, self.channel_combinations):
-            length = pub_result.data["input_meas"].shape[0]
-            formatted_results = np.split(
-                np.array(
-                    np.split(
-                        np.swapaxes(
-                            np.array(
-                                [
-                                    np.squeeze(pub_result.data["input_meas"].array),
-                                    np.squeeze(pub_result.data["alice_meas"].array),
-                                    np.squeeze(pub_result.data["bob_meas"].array),
-                                ]
-                            ),
-                            0,
-                            1,
-                        ),
-                        cast(int, length / 3),
+        with open(file_path, "w+") as f:
+            f.write("chA,chB,pA,pB,d,score\n")
+            for (chA, chB), pub in zip(self.channel_combinations, self.pubs):
+                pub_result = sampler.run([pub]).result()[0]
+                for result_for_noise_configuration, (pA, pB), input_samples in zip(
+                    self.reshape_result_data(pub_result),
+                    self.exploration_space,
+                    self.get_samples_for_noise_conf(pub[1]),
+                ):
+                    scores = self.get_scores_for_distances(
+                        distances, shots, result_for_noise_configuration, input_samples
                     )
-                ),
-                cast(int, length / 3 / 6),
-            )
-            # el 6 deberia reemplazarlo por la cantidad de input samples
-            # (121, 6, 3, 3, 1000) = (noise_grid, input_sample, measurement_basis, measured_qubits, shots)
 
+                    f.writelines(
+                        f"{chA.label},{chB.label},{pA},{pB},{d.__name__},{score}\n"
+                        for d, score in zip(distances, scores)
+                    )
 
-            for res_for_noise_configuration, (pA, pB) in zip(
-                formatted_results, self.exploration_space
-            ):
-                scores = np.array(
-                    [
-                        average_distance_of_teleportation(
-                            res_for_input_state, phi_eulerian_angles, shots, distances
-                        )
-                        for res_for_input_state, phi_eulerian_angles in zip(
-                            res_for_noise_configuration, self.input_sampler
-                        )
-                    ]
-                ).mean(axis=0)
-                df = pd.concat(
-                    [
-                        pd.DataFrame(
-                            [
-                                [chA.label, chB.label, pA, pB, d.__name__, score]
-                                for d, score in zip(distances, scores)
-                            ],
-                            columns=df.columns,
-                        ),
-                        df,
-                    ],
-                    ignore_index=True,
+    def get_samples_for_noise_conf(self, bindings_array):
+        params = bindings_array[tuple(INIT_STATE)]
+        return np.split(
+            params[::3, :], cast(int, len(params) / 3 / self.input_sampler.length)
+        )
+
+    def get_scores_for_distances(
+        self, distances, shots, result_for_noise_configuration, input_samples
+    ) -> NDArray[np.floating]:
+        return np.array(
+            [
+                average_distance_of_teleportation(
+                    result_for_input_state, phi_eulerian_angles, shots, distances
                 )
+                for result_for_input_state, phi_eulerian_angles in zip(
+                    result_for_noise_configuration, input_samples
+                )
+            ]
+        ).mean(axis=0)
 
-        return df
+    def reshape_result_data(self, pub_result):
+        length = pub_result.data["input_meas"].shape[0]
+        measurements = np.array(
+            [
+                np.squeeze(pub_result.data["input_meas"].array),
+                np.squeeze(pub_result.data["alice_meas"].array),
+                np.squeeze(pub_result.data["bob_meas"].array),
+            ]
+        )  # (3=measured_qubits, length, shots)
+
+        measurements = np.swapaxes(
+            measurements, 0, 1
+        )  # (length, 3=measured_qubits, shots)
+
+        by_samples = np.array(
+            np.split(measurements, cast(int, length / 3))
+        )  # (length / 3=measurement_basis, 3=measurement_basis, 3=measured_qubits, shots)
+
+        by_noise_configuration = np.split(
+            by_samples, cast(int, len(by_samples) / self.input_sampler.length)
+        )
+        # (121, input_samples, 3, 3, shots) = (noise_grid, input_samples, measurement_basis, measured_qubits, shots)
+        return by_noise_configuration

@@ -43,3 +43,20 @@ def get_probabilities_and_states(measurements_xyz, shots):
         ]
     )
     return probabilities, states
+
+def get_counts(result_for_basis_measurement):
+    bitstrings, counts = np.unique(
+        result_for_basis_measurement.T,
+        axis=0,
+        return_counts=True,
+    )
+    return {
+        tuple(bitstring.data): count.item()
+        for bitstring, count in zip(bitstrings, counts)
+    }
+
+def quantum_state_tomography(result_for_input_state, shots):
+    return get_probabilities_and_states(
+        [get_counts(result_for_basis_measurement) for result_for_basis_measurement in result_for_input_state],
+        shots,
+    )

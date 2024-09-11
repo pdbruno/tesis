@@ -1,7 +1,11 @@
-from qiskit import QuantumRegister, QuantumCircuit, ClassicalRegister, transpile
+from qiskit import QuantumRegister, QuantumCircuit, ClassicalRegister
 from qiskit.circuit.library import UGate
 from qiskit.circuit import Parameter, ParameterVector
 from channels import BaseChannel
+
+BOB_OPTIMAL_ROTATION = ParameterVector("bob_optimal_rotation", 3)
+INIT_STATE = ParameterVector("init_state", 3)
+BASIS_CHANGE = ParameterVector("basis_change", 3)
 
 
 def entangle(qc, q1, q2):
@@ -19,7 +23,7 @@ def bob_correction(qc: QuantumCircuit, q1, q2, qbob):
     qc.cz(q2, qbob)
     # aca va otra correccion que depende de los dos ruidos
     qc.append(
-        UGate(Parameter("bob_optimal_rotation_theta"), Parameter("bob_optimal_rotation_phi"), Parameter("bob_optimal_rotation_lambda"), label="Optimal Rotation"),
+        UGate(BOB_OPTIMAL_ROTATION[0], BOB_OPTIMAL_ROTATION[1], BOB_OPTIMAL_ROTATION[2], label="Optimal Rotation"),
         [qbob],
     )
 
@@ -56,9 +60,9 @@ def get_circuit(alice_noise: BaseChannel, bob_noise: BaseChannel):
 def bob_basis_change(bob_reg, qc):
     qc.append(
         UGate(
-            Parameter("basis_change_theta"),
-            Parameter("basis_change_phi"),
-            Parameter("basis_change_lambda"),
+            BASIS_CHANGE[0],
+            BASIS_CHANGE[1],
+            BASIS_CHANGE[2],
             label="Basis Change",
         ),
         [bob_reg[0]],
@@ -68,9 +72,9 @@ def bob_basis_change(bob_reg, qc):
 def initialize_input_state(input_reg, qc):
     qc.append(
         UGate(
-            Parameter("init_theta"),
-            Parameter("init_phi"),
-            Parameter("init_lambda"),
+            INIT_STATE[0],
+            INIT_STATE[1],
+            INIT_STATE[2],
             label="State Initializator",
         ),
         [input_reg[0]],

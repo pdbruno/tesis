@@ -109,25 +109,41 @@ class AmplitudeDampingChannel(BaseChannel):
         self.label = "ADC"
 
     def get_circuit(self, suffix):
-        qc = QuantumCircuit(2, 1)
+        qc = QuantumCircuit(2)
         theta = Parameter(self.get_parameter_label(suffix))
         qc.cry(theta, 0, 1)
         qc.cx(1, 0)
-        qc.measure(1, 0)
         return qc
 
     def append_channel_instruction(self, qc: QuantumCircuit, qubit: QuantumRegister):
         parent_zero = QuantumRegister(
             1, f"zero_{self.get_instruction_label(qubit.name)}"
         )
-        parent_meas = ClassicalRegister(
-            1, f"meas_{self.get_instruction_label(qubit.name)}"
-        )
         qc.add_register(parent_zero)
-        qc.add_register(parent_meas)
-        qc.append(self.get_instruction(qubit.name), [qubit, parent_zero], [parent_meas])
+        qc.append(self.get_instruction(qubit.name), [qubit, parent_zero])
 
     
+class PhaseDampingChannel(BaseChannel):
+
+    def get_theta(self, p):
+        return 2 * math.asin(p)  # sin (θ/2) = γ
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.label = "PDC"
+
+    def get_circuit(self, suffix):
+        qc = QuantumCircuit(2)
+        theta = Parameter(self.get_parameter_label(suffix))
+        qc.cry(theta, 0, 1)
+        return qc
+
+    def append_channel_instruction(self, qc: QuantumCircuit, qubit: QuantumRegister):
+        parent_zero = QuantumRegister(
+            1, f"zero_{self.get_instruction_label(qubit.name)}"
+        )
+        qc.add_register(parent_zero)
+        qc.append(self.get_instruction(qubit.name), [qubit, parent_zero])
 
 
 class MirroredAmplitudeDampingChannel(AmplitudeDampingChannel):
