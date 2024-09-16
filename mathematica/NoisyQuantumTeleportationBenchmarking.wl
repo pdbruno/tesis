@@ -13,6 +13,20 @@ GetDistanceLabel::usage = "GetDistanceLabel[d] returns a string representing the
 GetDistanceThreshold::usage = "GetDistanceThreshold[d] returns the distances's classical threshold"
 GetDistanceOutputFantasyName::usage = "GetDistanceOutputFantasyName[d] returns a string representing the distances's output id"
 
+ADC::usage = "Symbol that represents the Amplitude Damping Channel"
+MADC::usage = "Symbol that represents the Mirrored Amplitude Damping Channel"
+DC::usage = "Symbol that represents the Depolarizing Channel"
+PDC::usage = "Symbol that represents the Phase Damping Channel"
+Channels::usage = "List with all the noisy channels"
+
+TrDist::usage = "Trace Distance function for qubits in Bloch Representation"
+Fid::usage = "Fidelity function for qubits in Bloch Representation"
+Aff::usage = "Affinity function for qubits in Bloch Representation"
+WootersDist::usage = "Wooters Distance function for qubits in Bloch Representation"
+Distances::usage = "List with all the distance functions"
+
+AvgDistanceOfTeleportation::"Average Distance Of Teleportation Formula"
+
 
 Begin["`Private`"]
 
@@ -162,6 +176,9 @@ ForAllChannelsAndDistances[f_] := Do[
 
 
 (*Map[ResourceFunction["ToPythonFunction"], eigensystems]*)
+
+
+AvgDistanceOfTeleportation[chA_[pA_], chB_[pB_], d_]:= AvgDistOfTelepFormula[chA, chB, d][pA, pB];
 
 
 End[];
