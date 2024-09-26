@@ -57,7 +57,7 @@ class Experiment:
         self.exploration_space = exploration_space
         self.input_sampler = input_sampler
         self.transpiler = transpiler
-        self.pubs = (self.generate_pub(chA, chB) for chA, chB in channel_combinations)
+        self.pubs = [self.generate_pub(chA, chB) for chA, chB in channel_combinations]
 
     def generate_pub(
         self, alice_noise: BaseChannel, bob_noise: BaseChannel
@@ -103,11 +103,10 @@ class Experiment:
         shots: int,
         file_path: str,
     ):
-
+        results = sampler.run(self.pubs, shots=shots).result()
         with open(file_path, "w+") as f:
             f.write("chA,chB,pA,pB,d,score\n")
-            for (chA, chB), pub in zip(self.channel_combinations, self.pubs):
-                pub_result = sampler.run([pub]).result()[0]
+            for pub_result, (chA, chB), pub in zip(results, self.channel_combinations, self.pubs): # type: ignore
                 for result_for_noise_configuration, (pA, pB), input_samples in zip(
                     self.reshape_result_data(pub_result),
                     self.exploration_space,
