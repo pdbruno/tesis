@@ -1,7 +1,7 @@
 from qiskit import QuantumRegister, QuantumCircuit, ClassicalRegister
 from qiskit.circuit.library import UGate
 from qiskit.circuit import Parameter, ParameterVector
-from channels import BaseChannel
+from noisy_quantum_teleportation_benchmarking.channels import BaseChannel
 
 BOB_OPTIMAL_ROTATION = ParameterVector("bob_optimal_rotation", 3)
 INIT_STATE = ParameterVector("init_state", 3)

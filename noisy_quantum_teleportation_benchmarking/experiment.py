@@ -1,16 +1,14 @@
-from averages import average_distance_of_teleportation
-from channels import BaseChannel
+from noisy_quantum_teleportation_benchmarking.averages import get_teleportation_score_for_state
+from noisy_quantum_teleportation_benchmarking.channels import BaseChannel
 import numpy as np
 from numpy.typing import NDArray
-from typing import Callable, Tuple
 from qiskit import QuantumCircuit
-from typing import cast, Callable, Sequence
+from typing import cast, Callable, Sequence, Tuple
 from qiskit.primitives.containers.sampler_pub import SamplerPubLike
 from qiskit.primitives.containers.bindings_array import BindingsArrayLike
-from channels import BaseChannel
-from distances import DistanceFunction
-from sampler import BaseInputSampler
-from teleportation_circuit import (
+from noisy_quantum_teleportation_benchmarking.distances import DistanceFunction
+from noisy_quantum_teleportation_benchmarking.sampler import BaseInputSampler
+from noisy_quantum_teleportation_benchmarking.teleportation_circuit import (
     BASIS_CHANGE,
     BOB_OPTIMAL_ROTATION,
     INIT_STATE,
@@ -112,13 +110,13 @@ class Experiment:
                     self.exploration_space,
                     self.get_samples_for_noise_conf(pub[1]),
                 ):
-                    scores = self.get_scores_for_distances(
+                    avg_distances_of_teleportation = self.get_avg_distances_of_teleportation(
                         distances, shots, result_for_noise_configuration, input_samples
                     )
 
                     f.writelines(
-                        f"{chA.label},{chB.label},{pA},{pB},{d.__name__},{score}\n"
-                        for d, score in zip(distances, scores)
+                        f"{chA.label},{chB.label},{pA},{pB},{d.__name__},{avg_distance_of_teleportation}\n"
+                        for d, avg_distance_of_teleportation in zip(distances, avg_distances_of_teleportation)
                     )
 
     def get_samples_for_noise_conf(self, bindings_array):
@@ -127,12 +125,12 @@ class Experiment:
             params[::3, :], cast(int, len(params) / 3 / self.input_sampler.length)
         )
 
-    def get_scores_for_distances(
+    def get_avg_distances_of_teleportation(
         self, distances, shots, result_for_noise_configuration, input_samples
     ) -> NDArray[np.floating]:
         return np.array(
             [
-                average_distance_of_teleportation(
+                get_teleportation_score_for_state(
                     result_for_input_state, phi_eulerian_angles, shots, distances
                 )
                 for result_for_input_state, phi_eulerian_angles in zip(

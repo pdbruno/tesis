@@ -8,13 +8,13 @@ import math
 from abc import ABC, abstractmethod
 
 bell_states = [
-    [1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
-    [0, 1/math.sqrt(2), 1/math.sqrt(2), 0],
-    [1/math.sqrt(2), 0, 0, -(1/math.sqrt(2))],
-    [0, 1/math.sqrt(2), -(1/math.sqrt(2)), 0]
+    [1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
+    [0, 1 / math.sqrt(2), 1 / math.sqrt(2), 0],
+    [1 / math.sqrt(2), 0, 0, -(1 / math.sqrt(2))],
+    [0, 1 / math.sqrt(2), -(1 / math.sqrt(2)), 0],
 ]
 
-#0: I, 1: X, 2: Z, 3: ZX
+# 0: I, 1: X, 2: Z, 3: ZX
 
 optimal_rotation_angles = [
     [0, 0, 0],
@@ -22,6 +22,7 @@ optimal_rotation_angles = [
     [0, 0, np.pi],
     [np.pi, np.pi, np.pi],
 ]
+
 
 class BaseChannel(ABC):
     @abstractmethod
@@ -34,7 +35,7 @@ class BaseChannel(ABC):
 
     def get_instruction_label(self, suffix) -> str:
         return f"{self.label}_{suffix}"
-    
+
     def get_parameter_label(self, suffix) -> str:
         return f"theta_{self.label}_{suffix}"
 
@@ -43,27 +44,45 @@ class BaseChannel(ABC):
         pass
 
     def get_instruction(self, suffix):
-        return self.get_circuit(suffix).to_instruction(label=self.get_instruction_label(suffix))
+        return self.get_circuit(suffix).to_instruction(
+            label=self.get_instruction_label(suffix)
+        )
 
     def __init__(self) -> None:
         super().__init__()
         self.label = ""
 
     @staticmethod
-    def bob_optimal_rotation_for_noises(noise_a: BaseChannel, noise_b: BaseChannel, pA: float, pB: float) -> list[float]:
+    def l_max_for_noises(
+        noise_a: BaseChannel, noise_b: BaseChannel, pA: float, pB: float
+    ) -> int:
 
         eigenvalues, eigenvectors = eigencosas[(noise_a.label, noise_b.label)](pA, pB)
         max_eigenvalue = max(eigenvalues)
-        max_eigenvectors = [eigenvectors[i] for i, eigenvalue in enumerate(eigenvalues) if eigenvalue == max_eigenvalue]
-        matching_bell_state = next((x for x in max_eigenvectors if x in bell_states), None) #first that matches
+        max_eigenvectors = [
+            eigenvectors[i]
+            for i, eigenvalue in enumerate(eigenvalues)
+            if eigenvalue == max_eigenvalue
+        ]
+        matching_bell_state = next(
+            (x for x in max_eigenvectors if x in bell_states), None
+        )  # first that matches
         if matching_bell_state == None:
-            matching_bell_state = np.sum(eigenvectors, axis=0).tolist() #linear combination
+            matching_bell_state = np.sum(
+                eigenvectors, axis=0
+            ).tolist()  # linear combination
             if matching_bell_state not in bell_states:
-                matching_bell_state = bell_states[0] #anyone
+                matching_bell_state = bell_states[0]  # anyone
 
-        w_index = bell_states.index(matching_bell_state)
+        return bell_states.index(matching_bell_state) + 1
 
-        return optimal_rotation_angles[w_index]
+    @staticmethod
+    def bob_optimal_rotation_for_noises(
+        noise_a: BaseChannel, noise_b: BaseChannel, pA: float, pB: float
+    ) -> list[float]:
+        return optimal_rotation_angles[
+            BaseChannel.l_max_for_noises(noise_a, noise_b, pA, pB) - 1
+        ]
 
 
 class DepolarizingChannel(BaseChannel):
@@ -122,7 +141,7 @@ class AmplitudeDampingChannel(BaseChannel):
         qc.add_register(parent_zero)
         qc.append(self.get_instruction(qubit.name), [qubit, parent_zero])
 
-    
+
 class PhaseDampingChannel(BaseChannel):
 
     def get_theta(self, p):
@@ -183,10 +202,10 @@ eigencosas = {
             * (2 + -1 * pB + pA * (-1 + 2 * pB) + 2 * pow((-1 + pA) * (-1 + pB), 0.5)),
         ],
         [
-            [0, 0, 1/math.sqrt(2), 0],
-            [0, 1/math.sqrt(2), 0, 0],
-            [-1 * 1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
-            [1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
+            [0, 0, 1 / math.sqrt(2), 0],
+            [0, 1 / math.sqrt(2), 0, 0],
+            [-1 * 1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
+            [1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
         ],
     ],
     ("ADC", "MADC"): lambda pA, pB: [
@@ -197,10 +216,10 @@ eigencosas = {
             0.25 * (pA + pB),
         ],
         [
-            [-1 * 1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
-            [1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
-            [0, 0, 1/math.sqrt(2), 0],
-            [0, 1/math.sqrt(2), 0, 0],
+            [-1 * 1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
+            [1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
+            [0, 0, 1 / math.sqrt(2), 0],
+            [0, 1 / math.sqrt(2), 0, 0],
         ],
     ],
     ("ADC", "DC"): lambda pA, pB: [
@@ -225,10 +244,10 @@ eigencosas = {
             ),
         ],
         [
-            [0, 0, 1/math.sqrt(2), 0],
-            [0, 1/math.sqrt(2), 0, 0],
-            [-1 * 1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
-            [1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
+            [0, 0, 1 / math.sqrt(2), 0],
+            [0, 1 / math.sqrt(2), 0, 0],
+            [-1 * 1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
+            [1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
         ],
     ],
     ("ADC", "PDC"): lambda pA, pB: [
@@ -239,10 +258,10 @@ eigencosas = {
             0.25 * (2 + -1 * pA + 2 * pow((-1 + pA) * (-1 + pB), 0.5)),
         ],
         [
-            [0, 0, 1/math.sqrt(2), 0],
-            [0, 1/math.sqrt(2), 0, 0],
-            [-1 * 1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
-            [1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
+            [0, 0, 1 / math.sqrt(2), 0],
+            [0, 1 / math.sqrt(2), 0, 0],
+            [-1 * 1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
+            [1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
         ],
     ],
     ("MADC", "ADC"): lambda pA, pB: [
@@ -253,10 +272,10 @@ eigencosas = {
             0.25 * (pA + pB),
         ],
         [
-            [-1 * 1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
-            [1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
-            [0, 0, 1/math.sqrt(2), 0],
-            [0, 1/math.sqrt(2), 0, 0],
+            [-1 * 1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
+            [1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
+            [0, 0, 1 / math.sqrt(2), 0],
+            [0, 1 / math.sqrt(2), 0, 0],
         ],
     ],
     ("MADC", "MADC"): lambda pA, pB: [
@@ -269,10 +288,10 @@ eigencosas = {
             * (2 + -1 * pB + pA * (-1 + 2 * pB) + 2 * pow((-1 + pA) * (-1 + pB), 0.5)),
         ],
         [
-            [0, 0, 1/math.sqrt(2), 0],
-            [0, 1/math.sqrt(2), 0, 0],
-            [-1 * 1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
-            [1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
+            [0, 0, 1 / math.sqrt(2), 0],
+            [0, 1 / math.sqrt(2), 0, 0],
+            [-1 * 1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
+            [1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
         ],
     ],
     ("MADC", "DC"): lambda pA, pB: [
@@ -297,10 +316,10 @@ eigencosas = {
             ),
         ],
         [
-            [0, 0, 1/math.sqrt(2), 0],
-            [0, 1/math.sqrt(2), 0, 0],
-            [-1 * 1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
-            [1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
+            [0, 0, 1 / math.sqrt(2), 0],
+            [0, 1 / math.sqrt(2), 0, 0],
+            [-1 * 1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
+            [1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
         ],
     ],
     ("MADC", "PDC"): lambda pA, pB: [
@@ -311,10 +330,10 @@ eigencosas = {
             0.25 * (2 + -1 * pA + 2 * pow((-1 + pA) * (-1 + pB), 0.5)),
         ],
         [
-            [0, 0, 1/math.sqrt(2), 0],
-            [0, 1/math.sqrt(2), 0, 0],
-            [-1 * 1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
-            [1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
+            [0, 0, 1 / math.sqrt(2), 0],
+            [0, 1 / math.sqrt(2), 0, 0],
+            [-1 * 1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
+            [1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
         ],
     ],
     ("DC", "ADC"): lambda pA, pB: [
@@ -339,10 +358,10 @@ eigencosas = {
             ),
         ],
         [
-            [0, 0, 1/math.sqrt(2), 0],
-            [0, 1/math.sqrt(2), 0, 0],
-            [-1 * 1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
-            [1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
+            [0, 0, 1 / math.sqrt(2), 0],
+            [0, 1 / math.sqrt(2), 0, 0],
+            [-1 * 1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
+            [1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
         ],
     ],
     ("DC", "MADC"): lambda pA, pB: [
@@ -367,10 +386,10 @@ eigencosas = {
             ),
         ],
         [
-            [0, 0, 1/math.sqrt(2), 0],
-            [0, 1/math.sqrt(2), 0, 0],
-            [-1 * 1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
-            [1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
+            [0, 0, 1 / math.sqrt(2), 0],
+            [0, 1 / math.sqrt(2), 0, 0],
+            [-1 * 1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
+            [1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
         ],
     ],
     ("DC", "DC"): lambda pA, pB: [
@@ -381,10 +400,10 @@ eigencosas = {
             0.25 * (4 + -3 * pB + 3 * pA * (-1 + pB)),
         ],
         [
-            [-1 * 1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
-            [0, 0, 1/math.sqrt(2), 0],
-            [0, 1/math.sqrt(2), 0, 0],
-            [1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
+            [-1 * 1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
+            [0, 0, 1 / math.sqrt(2), 0],
+            [0, 1 / math.sqrt(2), 0, 0],
+            [1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
         ],
     ],
     ("DC", "PDC"): lambda pA, pB: [
@@ -395,10 +414,10 @@ eigencosas = {
             0.25 * (2 + -1 * pA + -2 * (-1 + pA) * pow((1 + -1 * pB), 0.5)),
         ],
         [
-            [0, 0, 1/math.sqrt(2), 0],
-            [0, 1/math.sqrt(2), 0, 0],
-            [-1 * 1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
-            [1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
+            [0, 0, 1 / math.sqrt(2), 0],
+            [0, 1 / math.sqrt(2), 0, 0],
+            [-1 * 1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
+            [1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
         ],
     ],
     ("PDC", "ADC"): lambda pA, pB: [
@@ -409,10 +428,10 @@ eigencosas = {
             0.25 * pB,
         ],
         [
-            [-1 * 1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
-            [1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
-            [0, 0, 1/math.sqrt(2), 0],
-            [0, 1/math.sqrt(2), 0, 0],
+            [-1 * 1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
+            [1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
+            [0, 0, 1 / math.sqrt(2), 0],
+            [0, 1 / math.sqrt(2), 0, 0],
         ],
     ],
     ("PDC", "MADC"): lambda pA, pB: [
@@ -423,10 +442,10 @@ eigencosas = {
             0.25 * pB,
         ],
         [
-            [-1 * 1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
-            [1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
-            [0, 0, 1/math.sqrt(2), 0],
-            [0, 1/math.sqrt(2), 0, 0],
+            [-1 * 1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
+            [1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
+            [0, 0, 1 / math.sqrt(2), 0],
+            [0, 1 / math.sqrt(2), 0, 0],
         ],
     ],
     ("PDC", "DC"): lambda pA, pB: [
@@ -437,10 +456,10 @@ eigencosas = {
             0.25 * pB,
         ],
         [
-            [-1 * 1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
-            [1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
-            [0, 0, 1/math.sqrt(2), 0],
-            [0, 1/math.sqrt(2), 0, 0],
+            [-1 * 1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
+            [1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
+            [0, 0, 1 / math.sqrt(2), 0],
+            [0, 1 / math.sqrt(2), 0, 0],
         ],
     ],
     ("PDC", "PDC"): lambda pA, pB: [
@@ -451,10 +470,10 @@ eigencosas = {
             0.5 * (1 + pow((-1 + pA) * (-1 + pB), 0.5)),
         ],
         [
-            [0, 0, 1/math.sqrt(2), 0],
-            [0, 1/math.sqrt(2), 0, 0],
-            [-1 * 1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
-            [1/math.sqrt(2), 0, 0, 1/math.sqrt(2)],
+            [0, 0, 1 / math.sqrt(2), 0],
+            [0, 1 / math.sqrt(2), 0, 0],
+            [-1 * 1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
+            [1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)],
         ],
     ],
 }

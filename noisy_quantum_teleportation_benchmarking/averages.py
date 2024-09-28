@@ -1,5 +1,5 @@
 import numpy as np
-from quantum_state_tomography import get_probabilities_and_states, quantum_state_tomography
+from noisy_quantum_teleportation_benchmarking.quantum_state_tomography import get_probabilities_and_states, quantum_state_tomography
 from math import cos, sin
 from cmath import exp
 
@@ -26,7 +26,7 @@ def get_score_protocol_distance(p_is, rho_a, rho_B_is, distance):
 
 
 
-def average_distance_of_teleportation(result_for_input_state, rho_A, shots, distances):
+def get_teleportation_score_for_state(result_for_input_state, rho_A, shots, distances):
     p_is, rho_B_is = quantum_state_tomography(result_for_input_state, shots)
     bloch_rho_A = to_bloch(rho_A)
     return [get_score_protocol_distance(p_is, bloch_rho_A, rho_B_is, d) for d in distances]
