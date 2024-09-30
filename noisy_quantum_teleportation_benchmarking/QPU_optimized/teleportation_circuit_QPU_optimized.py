@@ -142,7 +142,7 @@ def get_circuit(
     return qc.assign_parameters(
         {
             alice_noise.get_parameter_label("alice"): alice_noise.get_theta(pA),
-            bob_noise.get_parameter_label("bob"): bob_noise.get_theta(pA),
+            bob_noise.get_parameter_label("bob"): bob_noise.get_theta(pB),
         },  # type: ignore
         flat_input=False,
         inplace=False

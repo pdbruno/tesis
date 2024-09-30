@@ -25,7 +25,7 @@ Aff::usage = "Affinity function for qubits in Bloch Representation"
 WootersDist::usage = "Wooters Distance function for qubits in Bloch Representation"
 Distances::usage = "List with all the distance functions"
 
-AvgDistanceOfTeleportation::"Average Distance Of Teleportation Formula"
+AvgDistanceOfTeleportation::usage = "Average Distance Of Teleportation Formula"
 
 
 Begin["`Private`"]
@@ -179,6 +179,16 @@ ForAllChannelsAndDistances[f_] := Do[
 
 
 AvgDistanceOfTeleportation[chA_[pA_], chB_[pB_], d_]:= AvgDistOfTelepFormula[chA, chB, d][pA, pB];
+
+
+Manipulate[ListPointPlot3D[{SpherePoints[100], (point |-> GetAffineDecompositionM[MADC[p]] . point + GetAffineDecompositionC[MADC[p]]) /@ SpherePoints[100]},BoxRatios->1 ],{p,0,1}]
+
+
+MADCGate[\[Theta]_] = {{0, 0, 0, 1}, {Cos[\[Theta]/2], Sin[\[Theta]/2], 0, 0}, {-Sin[\[Theta]/2], Cos[\[Theta]/2], 0, 0}, {0, 0, 1, 0}};
+BlochToDensityMatrix[t_] := 1/2*(IdentityMatrix[2] + Sum[t[[i]]*PauliMatrix[i], {i, 3}]);
+DensityMatrixToBloch[\[Rho]_] := Table[Tr[\[Rho] . KroneckerProduct[PauliMatrix[i], IdentityMatrix[2]]], {i, 3}];
+channel[p_] := With[{gate = MADCGate[2*ArcSin[Sqrt[p]]]},  t |-> DensityMatrixToBloch[gate . KroneckerProduct[BlochToDensityMatrix[t], DensityMatrix[ket[0]]] . ConjugateTranspose[gate]]];
+Manipulate[ListPointPlot3D[{SpherePoints[100], channel[p] /@ SpherePoints[100]},BoxRatios->1 ],{p,0,1}]
 
 
 End[];

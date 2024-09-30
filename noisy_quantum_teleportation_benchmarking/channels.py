@@ -69,7 +69,7 @@ class BaseChannel(ABC):
         )  # first that matches
         if matching_bell_state == None:
             matching_bell_state = np.sum(
-                eigenvectors, axis=0
+                max_eigenvectors, axis=0
             ).tolist()  # linear combination
             if matching_bell_state not in bell_states:
                 matching_bell_state = bell_states[0]  # anyone
@@ -145,6 +145,7 @@ class AmplitudeDampingChannel(BaseChannel):
 class PhaseDampingChannel(BaseChannel):
 
     def get_theta(self, p):
+        return 2 * math.asin(math.sqrt(p))  # sin^2 (θ/2) = γ
         return 2 * math.asin(p)  # sin (θ/2) = γ
 
     def __init__(self) -> None:
@@ -167,8 +168,12 @@ class PhaseDampingChannel(BaseChannel):
 
 class MirroredAmplitudeDampingChannel(AmplitudeDampingChannel):
     def get_circuit(self, suffix):
-        qc = super().get_circuit(suffix)
+        qc = QuantumCircuit(2)
+        theta = Parameter(self.get_parameter_label(suffix))
         qc.x(0)
+        qc.x(1)
+        qc.cry(theta, 0, 1)
+        qc.cx(1, 0)
         return qc
 
     def __init__(self) -> None:
