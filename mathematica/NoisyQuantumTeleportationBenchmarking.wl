@@ -26,6 +26,7 @@ WootersDist::usage = "Wooters Distance function for qubits in Bloch Representati
 Distances::usage = "List with all the distance functions"
 
 AvgDistanceOfTeleportation::usage = "Average Distance Of Teleportation Formula"
+QuantumCertified::usage = "Decides whether a value for average distance of teleportation can be quantum certified for a given distance measure"
 
 
 Begin["`Private`"]
@@ -59,21 +60,25 @@ TrDist[r_,s_]:=Sqrt[(r-s) . (r-s)]/2;
 GetDistanceLabel[TrDist] ^= "Trace Distance";
 GetDistanceThreshold[TrDist] ^= N[8(11\[Minus]2\[Sqrt]10)/81];
 GetDistanceOutputFantasyName[TrDist] ^= "trace_distance";
+QuantumCertified[TrDist, avgDistTelep_] ^:= avgDistTelep < GetDistanceThreshold[TrDist];
 
 Fid[r_,s_]:=(1+r . s)/2;
 GetDistanceLabel[Fid] ^= "Fidelity";
 GetDistanceThreshold[Fid] ^= N[2/3];
 GetDistanceOutputFantasyName[Fid] ^= "fidelity";
+QuantumCertified[Fid, avgDistTelep_] ^:= avgDistTelep > GetDistanceThreshold[Fid];
 
 Aff[r_,s_]:=(r . s+(1+Sqrt[1-r . r]) (1+Sqrt[1-s . s]))/((Sqrt[1+Sqrt[r . r]]+Sqrt[1-Sqrt[r . r]]) (Sqrt[1+Sqrt[s . s]]+Sqrt[1-Sqrt[s . s]]));
 GetDistanceLabel[Aff] ^= "Affinity";
 GetDistanceThreshold[Aff] ^= N[\[Sqrt]5/3];
 GetDistanceOutputFantasyName[Aff] ^= "affinity";
+QuantumCertified[Aff, avgDistTelep_] ^:= avgDistTelep > GetDistanceThreshold[Aff];
 
 WootersDist[r_,s_] := ArcCos[Sqrt[Fid[r, s]]];
 GetDistanceLabel[WootersDist] ^= "Wooters Distance";
 GetDistanceThreshold[WootersDist] ^= 0.589;
 GetDistanceOutputFantasyName[WootersDist] ^= "wooters_distance";
+QuantumCertified[WootersDist, avgDistTelep_] ^:= avgDistTelep < GetDistanceThreshold[WootersDist];
 
 Distances = { TrDist, Fid, Aff, WootersDist };
 
@@ -166,13 +171,10 @@ AvgDistOfTelepFormula[chA_, chB_, Fid]:= {pA, pB} |-> OptimizedFidelityFormula[c
 AvgDistOfTelepFormula[DC, DC, d_]:= {pA, pB} |-> PaulisAvg[DC[pA], DC[pB], d];
 AvgDistOfTelepFormula[chA_, chB_, d_]:= {pA, pB} |-> AvgDistDefinition[chA[pA], chB[pB], d];
 
-PaulisAvgFormula[chA_, chB_, Fid]:= {pA, pB} |-> OptimizedFidelityFormula[chA[pA], chB[pB]];
-PaulisAvgFormula[chA_, chB_, d_]:= {pA, pB} |-> PaulisAvg[chA[pA], chB[pB], d];
-
 
 ForAllChannelsAndDistances[f_] := Do[
-	f[chA, chB, d, AvgDistOfTelepFormula[chA, chB, d], PaulisAvgFormula[chA, chB, d]]
-, {d, Distances}, {chA, Channels}, {chB, Channels}]
+	f[chA, chB, d, AvgDistOfTelepFormula[chA, chB, d]]
+, {chA, Channels}, {chB, Channels},{d, Distances}]
 
 
 (*Map[ResourceFunction["ToPythonFunction"], eigensystems]*)

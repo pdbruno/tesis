@@ -146,7 +146,6 @@ class PhaseDampingChannel(BaseChannel):
 
     def get_theta(self, p):
         return 2 * math.asin(math.sqrt(p))  # sin^2 (θ/2) = γ
-        return 2 * math.asin(p)  # sin (θ/2) = γ
 
     def __init__(self) -> None:
         super().__init__()
