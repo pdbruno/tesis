@@ -162,3 +162,4 @@ cython_debug/
 #.idea/
 .vscode/launch.json
 qiskit-account.ipynb
+api_tokens.py

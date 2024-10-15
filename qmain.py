@@ -1,36 +1,146 @@
-from noisy_quantum_teleportation_benchmarking.QPU_optimized.experiment_QPU_optimized import ExperimentQPUOptimized
-from noisy_quantum_teleportation_benchmarking.channels import (
-    DepolarizingChannel,
-    AmplitudeDampingChannel,
-    MirroredAmplitudeDampingChannel,
-    PhaseDampingChannel,
+from api_tokens import api_tokens
+from noisy_quantum_teleportation_benchmarking.QPU_optimized.experiment_QPU_optimized import (
+    ExperimentQPUOptimized,
 )
-from noisy_quantum_teleportation_benchmarking.distances import affinity, trace_distance, wooters_distance, fidelity
+from noisy_quantum_teleportation_benchmarking.experiment import Experiment
+from noisy_quantum_teleportation_benchmarking.channels import AmplitudeDampingChannel
+from noisy_quantum_teleportation_benchmarking.distances import fidelity
+from noisy_quantum_teleportation_benchmarking.sampler import PauliSampler
 import numpy as np
 from qiskit.compiler import transpile
-from qiskit_ibm_runtime import QiskitRuntimeService, SamplerV2 as Sampler
-
-service = QiskitRuntimeService()
-backend = service.least_busy(simulator=False, operational=True)
-
-sampler = Sampler(mode=backend) #type: ignore
-# Turn on gate twirling. Requires qiskit_ibm_runtime 0.23.0 or later.
-sampler.options.twirling.enable_gates = True #type: ignore
-
-sampler.options.dynamical_decoupling.enable = True #type: ignore
-sampler.options.dynamical_decoupling.sequence_type = "XpXm" #type: ignore
+from qiskit_ibm_runtime import (
+    QiskitRuntimeService,
+    SamplerV2 as Sampler,
+    IBMRuntimeError,
+)
 
 adc = AmplitudeDampingChannel()
 channel_combinations = [(adc, adc)]
-distances = list(
-    map(
-        lambda d: np.vectorize(d, signature="(3),(3)->()"),
-        [fidelity],
-    )
-)
-ps = np.linspace(0, 1, 11)
-exploration_space = [(x, x) for x in ps]
+diagonal_exploration_space = [(x, x) for x in np.linspace(0, 1, 11)]
+fighting_noise_with_noise_exploration_space = [(0.85, x) for x in np.linspace(0, 1, 11)]
+distances = [np.vectorize(fidelity, signature="(3),(3)->()")]
+input_sampler = PauliSampler()
 
-transpiler = lambda qc: transpile(qc, backend, optimization_level=3)
-experiment = ExperimentQPUOptimized(channel_combinations, exploration_space, transpiler)
-experiment.run_with_sampler(sampler, distances, 2000, 'ADC-pauli-quantum-QPU-optimized-EM-optim3.csv')
+
+class ServiceContainer:
+    def __init__(self) -> None:
+        self.iterador_tokens = iter(api_tokens)
+        self.service: QiskitRuntimeService = None  # type: ignore
+        self.log_in_con_proximo_token()
+
+    def log_in_con_proximo_token(self):
+        QiskitRuntimeService.save_account(
+            channel="ibm_quantum",
+            overwrite=True,
+            token=api_tokens[next(self.iterador_tokens)],
+        )
+        self.service = QiskitRuntimeService()
+
+
+class QPUExperiments:
+    def __init__(self, serviceContainer, backend_name) -> None:
+        self.serviceContainer: ServiceContainer = serviceContainer
+        self.backend_name = backend_name
+        self.transpiler = lambda qc: transpile(
+            qc,
+            serviceContainer.service.backend(backend_name),
+            optimization_level=3,
+        )
+
+    def try_run_or_change_account(self, fn):
+        try:
+            fn()
+        except IBMRuntimeError as e:
+            if "Job create exceeds open plan job usage limits" in e.args[0]:
+                serviceContainer.log_in_con_proximo_token()
+                fn()
+            else:
+                raise e
+
+    def run_unoptimized_experiment(self, shots):
+
+        experiment = Experiment(
+            channel_combinations,
+            diagonal_exploration_space,
+            input_sampler,
+            self.transpiler,
+        )
+        self.try_run_or_change_account(
+            lambda: experiment.run_with_sampler(
+                self.get_basic_sampler(),
+                distances,
+                shots,
+                f"qpu-results\\{self.backend_name}_diagonal_unoptimized.csv",
+            )
+        )
+
+    def run_QPU_optimized_experiment(self, shots):
+
+        experiment = ExperimentQPUOptimized(
+            channel_combinations, diagonal_exploration_space, self.transpiler
+        )
+        self.try_run_or_change_account(
+            lambda: experiment.run_with_sampler(
+                self.get_basic_sampler(),
+                distances,
+                shots,
+                f"qpu-results\\{self.backend_name}_diagonal_QPU_optimized.csv",
+            )
+        )
+
+    def run_QPU_optimized_EM_experiment(self, shots):
+        experiment = ExperimentQPUOptimized(
+            channel_combinations, diagonal_exploration_space, self.transpiler
+        )
+        self.try_run_or_change_account(
+            lambda: experiment.run_with_sampler(
+                self.get_EM_sampler(),
+                distances,
+                shots,
+                f"qpu-results\\{self.backend_name}_diagonal_QPU_optimized_EM.csv",
+            )
+        )
+
+    def run_fighting_noise_with_noise_experiment(self, shots):
+        experiment = ExperimentQPUOptimized(
+            channel_combinations,
+            fighting_noise_with_noise_exploration_space,
+            self.transpiler,
+        )
+        self.try_run_or_change_account(
+            lambda: experiment.run_with_sampler(
+                self.get_EM_sampler(),
+                distances,
+                shots,
+                f"qpu-results\\{self.backend_name}_fighting_noise_with_noise.csv",
+            )
+        )
+
+    def run_experiments(self):
+        self.run_unoptimized_experiment(2000)
+        self.run_QPU_optimized_experiment(2000)
+        self.run_QPU_optimized_EM_experiment(2000)
+        self.run_fighting_noise_with_noise_experiment(5000)
+
+    def get_basic_sampler(self):
+        return Sampler(mode=self.serviceContainer.service.backend(self.backend_name))
+
+    def get_EM_sampler(self):
+        sampler = Sampler(mode=self.serviceContainer.service.backend(self.backend_name))
+        # Turn on gate twirling. Requires qiskit_ibm_runtime 0.23.0 or later.
+        sampler.options.twirling.enable_gates = True  # type: ignore
+
+        sampler.options.dynamical_decoupling.enable = True  # type: ignore
+        sampler.options.dynamical_decoupling.sequence_type = "XpXm"  # type: ignore
+        return sampler
+
+
+serviceContainer = ServiceContainer()
+
+for backend_name in ["ibm_sherbrooke", "ibm_brisbane"]: #"ibm_sherbrooke", "ibm_brisbane",
+    QPUExperiments(serviceContainer, backend_name).run_fighting_noise_with_noise_experiment(7000)
+
+for backend_name in ["ibm_kyiv"]: #"ibm_sherbrooke", "ibm_brisbane",
+    QPUExperiments(serviceContainer, backend_name).run_experiments()
+
+asd = 1+1

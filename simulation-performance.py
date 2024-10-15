@@ -13,7 +13,10 @@ teorico["score"] = (
 )
 simulacion['score_teorico'] = teorico['score'].values
 grouped_diffs = (simulacion['score'] - simulacion['score_teorico']).groupby(['chA', 'chB', 'd'])
-grouped_diffs.agg(["mean", "std"]).reset_index().to_latex(
-    "simulation-preformance.txt", index=False, float_format="{:.2E}".format,
+final = grouped_diffs.agg(["mean", "std"]).reset_index()
+final.to_latex(
+    "simulation-preformance.txt", float_format="{:.2E}".format,
     formatters={}
 )
+print(final[final['mean'].abs() == final['mean'].abs().min()])
+print(final[final['mean'].abs() == final['mean'].abs().max()])
