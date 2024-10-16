@@ -36,7 +36,7 @@ class ServiceContainer:
             token=api_tokens[next_token],
         )
         self.service = QiskitRuntimeService()
-        print('el proximo token es de ', next_token)
+        print('el proximo token es de', next_token)
 
 
 class QPUExperiments:
