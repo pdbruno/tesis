@@ -29,12 +29,14 @@ class ServiceContainer:
         self.log_in_con_proximo_token()
 
     def log_in_con_proximo_token(self):
+        next_token = next(self.iterador_tokens)
         QiskitRuntimeService.save_account(
             channel="ibm_quantum",
             overwrite=True,
-            token=api_tokens[next(self.iterador_tokens)],
+            token=api_tokens[next_token],
         )
         self.service = QiskitRuntimeService()
+        print('el proximo token es de ', next_token)
 
 
 class QPUExperiments:
@@ -137,10 +139,10 @@ class QPUExperiments:
 
 serviceContainer = ServiceContainer()
 
-for backend_name in ["ibm_sherbrooke", "ibm_brisbane"]: #"ibm_sherbrooke", "ibm_brisbane",
-    QPUExperiments(serviceContainer, backend_name).run_fighting_noise_with_noise_experiment(7000)
+# for backend_name in ["ibm_brisbane"]: #"ibm_sherbrooke", "ibm_brisbane",
+#     QPUExperiments(serviceContainer, backend_name).run_fighting_noise_with_noise_experiment(7000)
 
-for backend_name in ["ibm_kyiv"]: #"ibm_sherbrooke", "ibm_brisbane",
+for backend_name in ["ibm_sherbrooke", "ibm_brisbane", "ibm_kyiv"]:
     QPUExperiments(serviceContainer, backend_name).run_experiments()
 
 asd = 1+1
