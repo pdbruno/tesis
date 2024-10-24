@@ -72,7 +72,7 @@ class QPUExperiments:
                 self.get_basic_sampler(),
                 distances,
                 shots,
-                f"qpu-results\\{self.backend_name}_diagonal_unoptimized.csv",
+                f"qpu-results\\{self.backend_name}_diagonal_unoptimized_{shots}.csv",
             )
         )
 
@@ -86,7 +86,7 @@ class QPUExperiments:
                 self.get_basic_sampler(),
                 distances,
                 shots,
-                f"qpu-results\\{self.backend_name}_diagonal_QPU_optimized.csv",
+                f"qpu-results\\{self.backend_name}_diagonal_QPU_optimized_{shots}.csv",
             )
         )
 
@@ -99,7 +99,7 @@ class QPUExperiments:
                 self.get_EM_sampler(),
                 distances,
                 shots,
-                f"qpu-results\\{self.backend_name}_diagonal_QPU_optimized_EM.csv",
+                f"qpu-results\\{self.backend_name}_diagonal_QPU_optimized_EM_{shots}.csv",
             )
         )
 
@@ -114,7 +114,7 @@ class QPUExperiments:
                 self.get_EM_sampler(),
                 distances,
                 shots,
-                f"qpu-results\\{self.backend_name}_fighting_noise_with_noise.csv",
+                f"qpu-results\\{self.backend_name}_fighting_noise_with_noise_{shots}.csv",
             )
         )
 
@@ -122,7 +122,7 @@ class QPUExperiments:
         self.run_unoptimized_experiment(2000)
         self.run_QPU_optimized_experiment(2000)
         self.run_QPU_optimized_EM_experiment(2000)
-        self.run_fighting_noise_with_noise_experiment(5000)
+        self.run_fighting_noise_with_noise_experiment(7000)
 
     def get_basic_sampler(self):
         return Sampler(mode=self.serviceContainer.service.backend(self.backend_name))
@@ -142,7 +142,7 @@ serviceContainer = ServiceContainer()
 # for backend_name in ["ibm_brisbane"]: #"ibm_sherbrooke", "ibm_brisbane",
 #     QPUExperiments(serviceContainer, backend_name).run_fighting_noise_with_noise_experiment(7000)
 
-for backend_name in ["ibm_sherbrooke", "ibm_brisbane", "ibm_kyiv"]:
+for backend_name in ["ibm_sherbrooke", "ibm_brisbane"]:#, "ibm_kyiv"
     QPUExperiments(serviceContainer, backend_name).run_experiments()
 
 asd = 1+1
