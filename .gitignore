@@ -163,3 +163,5 @@ cython_debug/
 .vscode/launch.json
 qiskit-account.ipynb
 api_tokens.py
+tomography.png
+haar-samples.png

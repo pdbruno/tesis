@@ -193,6 +193,17 @@ channel[p_] := With[{gate = MADCGate[2*ArcSin[Sqrt[p]]]},  t |-> DensityMatrixTo
 Manipulate[ListPointPlot3D[{SpherePoints[100], channel[p] /@ SpherePoints[100]},BoxRatios->1 ],{p,0,1}]
 
 
+ps = {0, 0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8, 0.9, 1};
+
+
+Table[
+AvgDistanceOfTeleportation[ADC[0.85], ADC[p], Fid]
+,{p, ps}]
+
+
+AvgDistanceOfTeleportation[]
+
+
 End[];
 
 

@@ -122,7 +122,7 @@ class QPUExperiments:
         self.run_unoptimized_experiment(2000)
         self.run_QPU_optimized_experiment(2000)
         self.run_QPU_optimized_EM_experiment(2000)
-        self.run_fighting_noise_with_noise_experiment(7000)
+        self.run_fighting_noise_with_noise_experiment(10000)
 
     def get_basic_sampler(self):
         return Sampler(mode=self.serviceContainer.service.backend(self.backend_name))
@@ -139,10 +139,7 @@ class QPUExperiments:
 
 serviceContainer = ServiceContainer()
 
-# for backend_name in ["ibm_brisbane"]: #"ibm_sherbrooke", "ibm_brisbane",
-#     QPUExperiments(serviceContainer, backend_name).run_fighting_noise_with_noise_experiment(7000)
 
-for backend_name in ["ibm_sherbrooke", "ibm_brisbane"]:#, "ibm_kyiv"
+for backend_name in ["ibm_sherbrook", "ibm_brisbane"]:#, "ibm_kyiv"
     QPUExperiments(serviceContainer, backend_name).run_experiments()
 
-asd = 1+1
