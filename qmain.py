@@ -117,6 +117,20 @@ class QPUExperiments:
                 f"qpu-results\\{self.backend_name}_fighting_noise_with_noise_{shots}.csv",
             )
         )
+    def HARDCORE_run_fighting_noise_with_noise_experiment(self, shots):
+        experiment = ExperimentQPUOptimized(
+            channel_combinations,
+            [(0.85, 0.7)],
+            self.transpiler,
+        )
+        self.try_run_or_change_account(
+            lambda: experiment.run_with_sampler(
+                self.get_EM_sampler(),
+                distances,
+                shots,
+                f"qpu-results\\{self.backend_name}_HARDCORE_fighting_noise_with_noise_{shots}.csv",
+            )
+        )
 
     def run_experiments(self):
         self.run_unoptimized_experiment(2000)
@@ -140,6 +154,6 @@ class QPUExperiments:
 serviceContainer = ServiceContainer()
 
 
-for backend_name in ["ibm_sherbrook", "ibm_brisbane"]:#, "ibm_kyiv"
-    QPUExperiments(serviceContainer, backend_name).run_experiments()
-
+for backend_name in ["ibm_sherbrooke", "ibm_brisbane"]:#, "ibm_kyiv"
+    #QPUExperiments(serviceContainer, backend_name).run_experiments()
+    QPUExperiments(serviceContainer, backend_name).HARDCORE_run_fighting_noise_with_noise_experiment(100000)

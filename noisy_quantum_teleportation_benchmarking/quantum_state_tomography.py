@@ -1,3 +1,4 @@
+from math import sqrt
 import numpy as np
 
 bell_states = ((0, 0), (0, 1), (1, 0), (1, 1))
@@ -19,7 +20,8 @@ def get_counts_for_bell_state(
 def get_coordinate(base, bell_state):
     zeroes = base.get(bell_state + (0,), 0)
     ones = base.get(bell_state + (1,), 0)
-    return (zeroes - ones) / (zeroes + ones) if zeroes + ones != 0 else 0
+    return (zeroes - ones) / (zeroes + ones)
+
 
 def get_probabilities_and_states(measurements_xyz, shots):
     measurements_x, measurements_y, measurements_z = measurements_xyz
@@ -34,15 +36,16 @@ def get_probabilities_and_states(measurements_xyz, shots):
     )
     states = np.array(
         [
-            [
+            [0, 0, 0] if p == 0 else [
                 get_coordinate(measurements_x, bell_state),
                 get_coordinate(measurements_y, bell_state),
                 get_coordinate(measurements_z, bell_state),
             ]
-            for bell_state in bell_states
+            for bell_state, p in zip(bell_states, probabilities)
         ]
     )
-    return probabilities, states
+    return probabilities, maybe_renormalize(states)
+
 
 def get_counts(result_for_basis_measurement):
     bitstrings, counts = np.unique(
@@ -55,8 +58,16 @@ def get_counts(result_for_basis_measurement):
         for bitstring, count in zip(bitstrings, counts)
     }
 
+
 def quantum_state_tomography(result_for_input_state, shots):
     return get_probabilities_and_states(
-        [get_counts(result_for_basis_measurement) for result_for_basis_measurement in result_for_input_state],
+        [
+            get_counts(result_for_basis_measurement)
+            for result_for_basis_measurement in result_for_input_state
+        ],
         shots,
     )
+
+def maybe_renormalize(states):
+    normas = np.maximum(np.linalg.vector_norm(states, axis=1), 1)
+    return states / normas[:, None]

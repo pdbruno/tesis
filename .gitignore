@@ -165,3 +165,13 @@ qiskit-account.ipynb
 api_tokens.py
 tomography.png
 haar-samples.png
+noisy_quantum_teleportation_benchmarking/__pycache__/channels.cpython-312.pyc
+noisy_quantum_teleportation_benchmarking/__pycache__/distances.cpython-312.pyc
+noisy_quantum_teleportation_benchmarking/__pycache__/experiment.cpython-312.pyc
+noisy_quantum_teleportation_benchmarking/QPU_optimized/__pycache__/experiment_QPU_optimized.cpython-312.pyc
+noisy_quantum_teleportation_benchmarking/QPU_optimized/__pycache__/teleportation_circuit_QPU_optimized.cpython-312.pyc
+simulation-performance.txt
+mathematica/haar-points.pdf
+noisy_quantum_teleportation_benchmarking/__pycache__/channels.cpython-312.pyc
+pauli-avg-sim.csv
+teorico.csv

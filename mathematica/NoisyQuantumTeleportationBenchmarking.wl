@@ -5,7 +5,7 @@ BeginPackage["NoisyQuantumTeleportationBenchmarking`"];
 
 ForAllChannelsAndDistances::usage =
         "ForAllChannelsAndDistances[f] takes a function and evaluates it for all possible pairs of noisy channels and distance functions. 
-		The last two arguments of f are a function to calculate the average distance of teleportation and the Pauli average of teleportation, respectively"
+		The last argument of f is a function to calculate the average distance of teleportation"
 GetChannelLabel::usage = "GetChannelLabel[ch] returns a string representing the channel's description"
 GetChannelOutputFantasyName::usage = "GetChannelOutputFantasyName[ch] returns a string representing the channel's output id"
 
@@ -27,6 +27,9 @@ Distances::usage = "List with all the distance functions"
 
 AvgDistanceOfTeleportation::usage = "Average Distance Of Teleportation Formula"
 QuantumCertified::usage = "Decides whether a value for average distance of teleportation can be quantum certified for a given distance measure"
+
+ResourceNegativityWithChannels::usage = "Gives the negativity of a Bell pair exposed to chA and chB"
+ChannelsMakeResourceSeparable::usage = "Returns whether a Bell pair exposed to chA and chB is separable"
 
 
 Begin["`Private`"]
@@ -144,32 +147,29 @@ GetEigenvectorsOfMaxEigenvalue[eigenvalues_, eigenvectors_] := eigenvectors[[Fla
 GetMaxEigenvector[{eigenvalues_, eigenvectors_}] := 
 	FindMatchingBellState[GetEigenvectorsOfMaxEigenvalue[eigenvalues, eigenvectors]];
 
-GetLMax[chA_[pA_], chB_[pB_]] := FirstPosition[bellStates, GetMaxEigenvector[eigensystems[{chA, chB}][pA, pB]]][[1]];
+GetLMax[eigensystem_] := FirstPosition[bellStates, GetMaxEigenvector[eigensystem]][[1]];
 
 
-RotOptFid[i_, chA_, chB_, lMax_]:= w[[i]] . w[[lMax]];
+RotOptFid[i_, lMax_]:= w[[i]] . w[[lMax]];
 p[i_, t_, fano_]:=(1 + t . (w[[i]] . GetRA[fano])) / 4;
-tBob[i_, t_, fano_, chA_, chB_, lMax_]:=1 / (4 * p[i, t, fano]) * RotOptFid[i, chA, chB, lMax] . (GetRB[fano] + Transpose[w[[i]] . GetR[fano]] . t);
+tBob[i_, t_, fano_, lMax_]:=1 / (4 * p[i, t, fano]) * RotOptFid[i, lMax] . (GetRB[fano] + Transpose[w[[i]] . GetR[fano]] . t);
 
 
-Score[chA_, chB_, t_, fanoForm_, d_, lMax_] := Sum[p[i, t, fanoForm] * d[t, tBob[i, t, fanoForm, chA, chB, lMax]], {i, 1, 4}];
+Score[t_, fanoForm_, d_, lMax_] := Sum[p[i, t, fanoForm] * d[t, tBob[i, t, fanoForm, lMax]], {i, 1, 4}];
 
 FanoFormForChannel[chA_[pA_], chB_[pB_]] := fanoForms[{chA, chB}][pA, pB];
 
-AvgDistDefinition[chA_, chB_, d_] := With[{ 
-			t = {Cos[\[Phi]] * Sin[\[Theta]], Sin[\[Phi]] * Sin[\[Theta]], Cos[\[Theta]]}, 
-			lMax = GetLMax[chA, chB], fanoForm = FanoFormForChannel[chA, chB]}, 
-			1/(4 Pi) NIntegrate[Evaluate[Score[chA, chB, t, fanoForm, d, lMax]* Sin[\[Theta]]], {\[Phi], 0, 2 Pi}, {\[Theta], 0, Pi}]]; 
+AvgDistDefinition[d_, fanoForm_, lMax_] := 1/(4 Pi) NIntegrate[Evaluate[Score[FromSphericalCoordinates[{1, \[Theta], \[Phi]}], fanoForm, d, lMax]* Sin[\[Theta]]], {\[Phi], 0, 2 Pi}, {\[Theta], 0, Pi}]; 
 			 
-PaulisAvg[chA_, chB_, d_] := With[{lMax = GetLMax[chA, chB], fanoForm = FanoFormForChannel[chA, chB]}, 
-	Sum[Score[chA, chB, t, fanoForm, d, lMax], {t, pauliEigenvectors}] / Length[pauliEigenvectors]];
-
-OptimizedFidelityFormula[chA_[pA_], chB_[pB_]] := (2 * Max[eigensystems[{chA, chB}][pA, pB][[1]]] + 1)/3;
+PaulisAvg[d_, fanoForm_, lMax_] := Sum[Score[t, fanoForm, d, lMax], {t, pauliEigenvectors}] / Length[pauliEigenvectors];
 
 
-AvgDistOfTelepFormula[chA_, chB_, Fid]:= {pA, pB} |-> OptimizedFidelityFormula[chA[pA], chB[pB]];
-AvgDistOfTelepFormula[DC, DC, d_]:= {pA, pB} |-> PaulisAvg[DC[pA], DC[pB], d];
-AvgDistOfTelepFormula[chA_, chB_, d_]:= {pA, pB} |-> AvgDistDefinition[chA[pA], chB[pB], d];
+AvgDistOfTelepFormula[chA_, chB_, Fid]:= With[{eigensystem = eigensystems[{chA, chB}]}, {pA, pB} |-> (2 * Max[eigensystem[pA, pB][[1]]] + 1)/3];
+AvgDistOfTelepFormula[DC, DC, d_]:= With[{fanoForm = fanoForms[{DC, DC}], eigensystem = eigensystems[{DC, DC}]}, 
+										{pA, pB} |-> PaulisAvg[d, fanoForm[pA, pB], GetLMax[eigensystem[pA, pB]]]];
+										
+AvgDistOfTelepFormula[chA_, chB_, d_]:= With[{fanoForm = fanoForms[{chA, chB}], eigensystem = eigensystems[{chA, chB}]}, 
+										{pA, pB} |-> AvgDistDefinition[d, fanoForm[pA, pB], GetLMax[eigensystem[pA, pB]]]];
 
 
 ForAllChannelsAndDistances[f_] := Do[
@@ -183,7 +183,7 @@ ForAllChannelsAndDistances[f_] := Do[
 AvgDistanceOfTeleportation[chA_[pA_], chB_[pB_], d_]:= AvgDistOfTelepFormula[chA, chB, d][pA, pB];
 
 
-Manipulate[ListPointPlot3D[{SpherePoints[100], (point |-> GetAffineDecompositionM[MADC[p]] . point + GetAffineDecompositionC[MADC[p]]) /@ SpherePoints[100]},BoxRatios->1 ],{p,0,1}]
+Manipulate[ListPointPlot3D[{SpherePoints[100], (point |-> GetAffineDecompositionM[ch[p]] . point + GetAffineDecompositionC[ch[p]]) /@ SpherePoints[100]},BoxRatios->1 ],{p,0,1}, {ch, {ADC, MADC, DC, PDC}}]
 
 
 MADCGate[\[Theta]_] = {{0, 0, 0, 1}, {Cos[\[Theta]/2], Sin[\[Theta]/2], 0, 0}, {-Sin[\[Theta]/2], Cos[\[Theta]/2], 0, 0}, {0, 0, 1, 0}};
@@ -193,15 +193,52 @@ channel[p_] := With[{gate = MADCGate[2*ArcSin[Sqrt[p]]]},  t |-> DensityMatrixTo
 Manipulate[ListPointPlot3D[{SpherePoints[100], channel[p] /@ SpherePoints[100]},BoxRatios->1 ],{p,0,1}]
 
 
-ps = {0, 0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8, 0.9, 1};
+Pt\[Rho][A1_,b1_,A2_,b2_,ww_]:=1/4 (IdentityMatrix[4]+KroneckerProduct[Sum[b1[[i]]*PauliMatrix[i],{i,1,3}],IdentityMatrix[2]]+KroneckerProduct[IdentityMatrix[2],Sum[b2[[i]]*Transpose[PauliMatrix[i]],{i,1,3}]]+Sum[(b1[[\[Alpha]]]*b2[[\[Beta]]]+Sum[ww[[i,i]]*A1[[\[Alpha],i]]*A2[[\[Beta],i]],{i,1,3}])*KroneckerProduct[PauliMatrix[\[Alpha]],Transpose[PauliMatrix[\[Beta]]]],{\[Alpha],1,3},{\[Beta],1,3}]);
 
 
-Table[
-AvgDistanceOfTeleportation[ADC[0.85], ADC[p], Fid]
-,{p, ps}]
+(*AffectedBellPairDensityMatrixFromFano[{rA_, rB_, r_}] := KroneckerProduct[BlochToDensityMatrix[rA], BlochToDensityMatrix[rB]] + Sum[r[[i, j]]*KroneckerProduct[PauliMatrix[i], PauliMatrix[j]], {i, 1, 3}, {j, 1, 3}];
+AffectedBellPairDensityMatrixFromFano[{rA_, rB_, r_}] := KroneckerProduct[BlochToDensityMatrix[rA], Transpose[BlochToDensityMatrix[rB]]] + Sum[r[[i, j]]*KroneckerProduct[PauliMatrix[i], Transpose[PauliMatrix[j]]], {i, 1, 3}, {j, 1, 3}];
+AffectedBellPairDensityMatrixFromChannels[chA_[pA_], chB_[pB_]] := AffectedBellPairDensityMatrixFromFano[FanoFormForChannel[chA[pA], chB[pB]]]*)
 
 
-AvgDistanceOfTeleportation[]
+PartialTranspose = ArrayFlatten @ Map[Transpose, Partition[#, {2, 2}], {2}] &;
+
+
+TraceNorm[X_] := Tr[Sqrt[ConjugateTranspose[X] . X]]
+
+
+ResourceNegativityWithChannels[chA_, chB_]:= Module[{eig},
+eig=Eigenvalues[Pt\[Rho][GetAffineDecompositionM[chA], GetAffineDecompositionC[chA], GetAffineDecompositionM[chB],GetAffineDecompositionC[chB], w[[1]]]];
+Abs[Total[Select[eig,#<0&]]]
+]
+ChannelsMakeResourceSeparable[chA_, chB_] := ResourceNegativityWithChannels[chA, chB] == 0
+
+
+teleport[t_, chA_[pA_], chB_[pB_]] := Table[tBob[i, t, FanoFormForChannel[chA[pA], chB[pB]], GetLMax[eigensystems[{chA, chB}][pA, pB]]], {i, 1, 4}]
+Manipulate[
+ Graphics3D[{{Opacity[0.5], Sphere[]}, 
+   {EdgeForm[{Dashed, Red}], 
+    FaceForm[None], Cylinder[{{0, 0, -.001}, {0, 0, .001}}]}, 
+   {Dashed, Line[{{0, 0, 0}, {1, 0, 0}}]}, 
+   {Dashed, Line[{{0, 0, 0}, {0, 1, 0}}]}, 
+   {Dashed, Line[{{0, 0, 0}, {0, 0, 1}}]}, 
+   Arrow[{{1, 0, 0}, {1.3, 0, 0}}], 
+   Arrow[{{0, 1, 0}, {0, 1.3, 0}}], 
+   Arrow[{{0, 0, 1}, {0, 0, 1.3}}], 
+   Text[Style["x", 18], {1.4, 0, 0}], 
+   Text[Style["y", 18], {0, 1.4, 0}], 
+   Text[Style["z", 18], {0, 0, 1.4}], 
+   Text[Style["t", 18, Red], .5 {Cos[t[[1]]] Sin[t[[2]]], Sin[t[[1]]] Sin[t[[2]]], Cos[t[[2]]]}], 
+   {Red, Arrow[{{0, 0, 0}, {Cos[t[[1]]] Sin[t[[2]]], Sin[t[[1]]] Sin[t[[2]]], Cos[t[[2]]]}}]},
+  Sequence[({Green, Arrow[{{0, 0, 0}, #}]})& /@ teleport[{Cos[t[[1]]] Sin[t[[2]]], Sin[t[[1]]] Sin[t[[2]]], Cos[t[[2]]]}, chA[pA], chB[pB]]]
+  }, 
+  Boxed -> False], 
+  {t,{0, 0},{2*\[Pi], \[Pi]}},
+  {chA, {ADC, MADC, DC, PDC}},
+  {pA, 0, 1},
+  {chB, {ADC, MADC, DC, PDC}},
+  {pB, 0, 1}
+  ]
 
 
 End[];

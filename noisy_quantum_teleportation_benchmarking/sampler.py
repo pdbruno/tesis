@@ -4,6 +4,7 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.stats import rv_continuous
 
+
 class BaseInputSampler(ABC):
     @abstractmethod
     def get_samples(self) -> NDArray[np.floating]:
@@ -12,6 +13,7 @@ class BaseInputSampler(ABC):
     def __init__(self, length) -> None:
         super().__init__()
         self.length = length
+
 
 class PauliSampler(BaseInputSampler):
     def __init__(self) -> None:
@@ -39,18 +41,20 @@ class PauliSampler(BaseInputSampler):
         return self.all
 
 
-class sin_prob_dist(rv_continuous):
-    def _pdf(self, theta):
-        # The 0.5 is so that the distribution is normalized
-        return 0.5 * np.sin(theta)
+# class sin_prob_dist(rv_continuous):
+#     def _pdf(self, theta):
+#         # The 0.5 is so that the distribution is normalized
+#         return 0.5 * np.sin(theta)
+
 
 class HaarMeasureSampler(BaseInputSampler):
     def __init__(self, length) -> None:
         super().__init__(length)
         # Samples of theta should be drawn from between 0 and pi
-        self.sin_sampler = sin_prob_dist(a=0, b=np.pi)
+        # self.sin_sampler = sin_prob_dist(a=0, b=np.pi)
 
     def get_samples(self) -> NDArray[np.floating]:
-        thetas: NDArray[np.floating] = self.sin_sampler.rvs(size=self.length) # type: ignore
+        # thetas: NDArray[np.floating] = self.sin_sampler.rvs(size=self.length) # type: ignore
+        thetas = np.arccos(-np.random.uniform(-1, 1, (self.length, 1)))
         phis_lambdas = np.random.uniform(0, 2 * pi, (self.length, 2))
-        return np.hstack([thetas.reshape(self.length, 1), phis_lambdas])
+        return np.hstack([thetas, phis_lambdas])

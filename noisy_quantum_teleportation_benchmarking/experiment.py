@@ -25,7 +25,7 @@ basis_change = np.asarray(
 )
 
 
-def get_cartesian_product_nashe(
+def get_cartesian_product(
     A: NDArray[np.floating], sampler: BaseInputSampler, C: NDArray[np.floating]
 ):
     n = len(A)
@@ -73,7 +73,7 @@ class Experiment:
             ]
         )
 
-        cart_prod = get_cartesian_product_nashe(
+        cart_prod = get_cartesian_product(
             noise_params, self.input_sampler, basis_change
         )
 

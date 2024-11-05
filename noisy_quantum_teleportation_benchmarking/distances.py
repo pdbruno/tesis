@@ -4,28 +4,21 @@ from numpy.typing import NDArray
 from typing import Callable
 
 
+def vector_norm(x):
+    return np.minimum(np.sqrt(x.dot(x)), 1)
+
+
 def trace_distance(r, s):
-    return np.sqrt((r - s) @ (r - s)) / 2
+    return vector_norm(r - s) / 2
 
 
 def fidelity(r, s):
-    return np.maximum(0, np.minimum(1, (1 + r @ s) / 2))
+    return np.clip((1 + r.dot(s)) / 2, 0, 1)
 
 
 def affinity(r, s):
-    return (
-        r @ s
-        + (1 + np.sqrt(1 - np.minimum(1, r @ r)))
-        * (1 + np.sqrt(1 - np.minimum(1, s @ s)))
-    ) / (
-        (
-            np.sqrt(1 + np.minimum(1, LA.vector_norm(r)))
-            + np.sqrt(1 - np.minimum(1, LA.vector_norm(r)))
-        )
-        * (
-            np.sqrt(1 + np.minimum(1, LA.vector_norm(s)))
-            + np.sqrt(1 - np.minimum(1, LA.vector_norm(s)))
-        )
+    return (r.dot(s) + 1 + np.sqrt(1 - np.minimum(1, s.dot(s)))) / (
+        np.sqrt(2) * (np.sqrt(1 + vector_norm(s)) + np.sqrt(1 - vector_norm(s)))
     )
 
 
