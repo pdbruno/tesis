@@ -154,6 +154,6 @@ class QPUExperiments:
 serviceContainer = ServiceContainer()
 
 
-for backend_name in ["ibm_sherbrooke", "ibm_brisbane"]:#, "ibm_kyiv"
-    #QPUExperiments(serviceContainer, backend_name).run_experiments()
-    QPUExperiments(serviceContainer, backend_name).HARDCORE_run_fighting_noise_with_noise_experiment(100000)
+for backend_name in ["ibm_sherbrooke", "ibm_brisbane", "ibm_kyiv"]:
+    QPUExperiments(serviceContainer, backend_name).run_experiments()
+    #QPUExperiments(serviceContainer, backend_name).HARDCORE_run_fighting_noise_with_noise_experiment(100000)

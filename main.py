@@ -27,12 +27,7 @@ channels = [
     PhaseDampingChannel(),
 ]
 channel_combinations = [(chA, chB) for chA in channels for chB in channels]
-distances = list(
-    map(
-        lambda d: np.vectorize(d, signature="(3),(3)->()"),
-        [trace_distance, fidelity, affinity, wooters_distance],
-    )
-)
+distances = [np.vectorize(d, signature="(3),(3)->()") for d in [trace_distance, fidelity, affinity, wooters_distance]]
 ps = np.linspace(0, 1, 11)
 exploration_space = [(x, y) for x in ps for y in ps]
 
@@ -47,5 +42,5 @@ experiment = Experiment(
     channel_combinations, exploration_space, input_sampler, transpiler
 )
 experiment.run_with_sampler(
-    sampler, distances, 2000, "haar-avg-sim-optim3.csv"
+    sampler, distances, 2000, "haar-avg-sim.csv"
 )
